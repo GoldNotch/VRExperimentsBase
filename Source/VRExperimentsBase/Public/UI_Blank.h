@@ -3,12 +3,12 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "GameFramework/Actor.h"
+#include "InteractableActor.h"
 #include "Blueprint/UserWidget.h"
 #include "UI_Blank.generated.h"
 
 UCLASS()
-class VREXPERIMENTSBASE_API AUI_Blank : public AActor
+class VREXPERIMENTSBASE_API AUI_Blank : public AInteractableActor
 {
 	GENERATED_BODY()
 	
