@@ -13,6 +13,8 @@ class VREXPERIMENTSBASE_API AInteractableActor : public AActor
 	GENERATED_BODY()
 	
 public:
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	bool bSendLogsToSciVi = true;
 
 	//trigger interaction
 	virtual void OnPressedByTrigger(const FHitResult& hitResult);

@@ -99,6 +99,8 @@ protected:
 	void CameraMove_LeftRight(float value);
 	UFUNCTION()
 	void CameraMove_UpDown(float value);
+	float Yaw;
+	float CameraPitch;
 	//------------ Walking -----------------
 	UFUNCTION()
 	void Walking_Trajectory();

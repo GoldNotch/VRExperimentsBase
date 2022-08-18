@@ -305,12 +305,18 @@ void ABaseInformant::OnLTriggerReleased(){}
 
 void ABaseInformant::CameraMove_LeftRight(float value)
 {
-	CameraComponent->AddLocalRotation(FRotator(0.0f, value, 0.0f));
+	Yaw += value;
+	GetController()->SetControlRotation(FRotator(0.0f, Yaw, 0.0f));
 }
 
 void ABaseInformant::CameraMove_UpDown(float value)
 {
-	CameraComponent->AddLocalRotation(FRotator(value, 0.0f, 0.0f));
+	CameraPitch += value;
+	if (CameraPitch > 89.0f)
+		CameraPitch = 89.0f;
+	if (CameraPitch < -89.0f)
+		CameraPitch = -89.0f;
+	CameraComponent->SetRelativeRotation(FRotator(CameraPitch, 0.0f, 0.0f));
 }
 
 void ABaseInformant::Walking_Trajectory()
