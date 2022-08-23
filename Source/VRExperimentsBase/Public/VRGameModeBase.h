@@ -16,6 +16,7 @@ THIRD_PARTY_INCLUDES_END
 #include "GameFramework/GameModeBase.h"
 #include "SRanipal_Eyes_Enums.h"
 #include "ExperimentStepBase.h"
+#include "BlueprintJsonLibrary.h"
 #include "VRGameModeBase.generated.h"
 
 /**
@@ -57,8 +58,11 @@ public:
 
 	// ----------------------- SciVi networking--------------
 public:
-	UFUNCTION(BlueprintCallable)
-	void SendToSciVi(FString& message);
+	void SendToSciVi(const FString& message);
+	UFUNCTION(BlueprintCallable, DisplayName = "SendToSciVi")
+	void SendToSciVi_BP(const FBlueprintJsonObject& message);
+	UFUNCTION(BlueprintImplementableEvent, DisplayName = "OnSciViMessageReceived")
+	void OnSciViMessageReceived_BP(const FBlueprintJsonObject& msgJson);
 protected:
 	virtual void OnSciViMessageReceived(TSharedPtr<FJsonObject> msgJson);
 	using WSServer = SimpleWeb::SocketServer<SimpleWeb::WS>;

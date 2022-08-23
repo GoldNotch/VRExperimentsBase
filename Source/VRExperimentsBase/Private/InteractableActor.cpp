@@ -42,10 +42,10 @@ void AInteractableActor::OnPressedByTrigger(const FHitResult& hitResult)
 	if (bSendLogsToSciVi) {
 		auto GM = Cast<AVRGameModeBase>(GetWorld()->GetAuthGameMode());
 		auto json = FString::Printf(TEXT("\"ControllerLog\": {"
-			"\"Action\": \"Press\","
-			"\"AOI\": \"%s\""
-			"}"),
-			*GetName());
+										"\"Action\": \"Press\","
+										"\"AOI\": \"%s\""
+										"}"),
+										*GetName());
 		GM->SendToSciVi(json);
 	}
 }
