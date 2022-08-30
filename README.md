@@ -24,3 +24,13 @@ Full list of events in InteractableActor Blueprint:
 - Controller Focus Tick - calls every tick while Informant is pointing to Actor by controller's ray  
 - Had Close To Player - calls when Actor become in InteractionRadius  
 - Had Far To player - calls when Actor is out of InteractionRadius  
+
+# UI Interaction
+Plugin provides interaction with UMG(with all default widgets). All interactable Widgets must be 3D actors and placed in level.
+## How to create Interactable UI?
+1) Create new Widget Blueprint (Add -> UserInterface -> Widget Blueprint). Limit the size with current values of width and height (use custom size).
+2) Place all widgets in limited area
+3) Create new Blueprint Actor(inherit from UI_Blank). UI_Blank it's InteractableActor which has WidgetComponent. Choose WidgetComponent and assign created in step 1 Widget class to  WidgetClass setting(in UserInterface section). Also assign Widget's width and height to DrawSize setting.
+4) In BeginPlay event of actor you can set events on buttons and other widgets. For that, get WidgetComponent->GetWidget() -> Cast To WidgetClass from step 1. Then get elements like variable, find Bind Event to Clicked(for example) and set custom event.
+5) Place created UI_Blank actor in the level.
+
