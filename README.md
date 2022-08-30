@@ -1,5 +1,5 @@
 # VRExperimentsBase  
-Plugin for Unreal Engine 4 to quick start VR project on C++ (in SciVI environment)  
+Plugin for Unreal Engine 4 to quick start VR project without C++ programming (in SciVI environment)  
 
 It provides VR character(BaseInformant) which has setuped VR headset, controllers and can interact to scene objects by default.  Also it collects information about EyeTrack and interactions and sends it in SciVi (via websocket).  
 
