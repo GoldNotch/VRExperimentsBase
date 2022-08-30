@@ -5,7 +5,7 @@ It provides VR character(BaseInformant) which has setuped VR headset, controller
 
 # Editor setup  
 Plugin requires some setup to work correctrly.  
-1) Install plugin [JsonBlueprint](https://www.unrealengine.com/marketplace/en-US/product/json-blueprint)  
+1) Install plugin [JsonBlueprint](https://www.unrealengine.com/marketplace/en-US/product/json-blueprint) - it provides ability to construct and parse json messages in blueprint (SciVi Communination format is JSON)
 2) Set Inputs in ProjectSettings:  
   - ActionMappings: RTrigger = {Vive(R) Trigger}, Walking  = {Vive(R) Trackpad Up}  
   - AxisMappings: CameraMove_RightLeft = {MouseX}, CameraMove_UpDown = {MouseY} - it's for debug, to launch game without headset  
@@ -33,4 +33,10 @@ Plugin provides interaction with UMG(with all default widgets). All interactable
 3) Create new Blueprint Actor(inherit from UI_Blank). UI_Blank it's InteractableActor which has WidgetComponent. Choose WidgetComponent and assign created in step 1 Widget class to  WidgetClass setting(in UserInterface section). Also assign Widget's width and height to DrawSize setting.
 4) In BeginPlay event of actor you can set events on buttons and other widgets. For that, get WidgetComponent->GetWidget() -> Cast To WidgetClass from step 1. Then get elements like variable, find Bind Event to Clicked(for example) and set custom event.
 5) Place created UI_Blank actor in the level.
+
+# Communication with SciVi
+SciVi is platform for collecting data and experiment's controlling.
+VRGameMode class can communicate with SciVi via next mehtods:
+- SendToSciVi(FString json_message), where json_message is stringifed json object/value, where name of json is message ID. f.e "Gaze" : {<gaze data>}.
+- OnSciViMessageReceived(JsonObject msg_json) - event, calls when SciVi sends message as json value/object, where name of object is command and body of object is command's arguments. F.e. "HideController": "left". In Event you can define which command you get and process it.
 
