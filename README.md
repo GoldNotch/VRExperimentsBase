@@ -38,5 +38,5 @@ Plugin provides interaction with UMG(with all default widgets). All interactable
 SciVi is platform for collecting data and experiment's controlling.
 VRGameMode class can communicate with SciVi via next mehtods:
 - SendToSciVi(FString json_message), where json_message is stringifed json object/value, where name of json is message ID. f.e "Gaze" : {<gaze data>}.
-- OnSciViMessageReceived(JsonObject msg_json) - event, calls when SciVi sends message as json value/object, where name of object is command and body of object is command's arguments. F.e. "HideController": "left". In Event you can define which command you get and process it.
+- OnSciViMessageReceived(JsonObject msg_json) - event, calls when SciVi sends message as json value/object, where name of object is command and body of object is command's arguments. F.e. "HideController": "left". In Event you can understand which command you get and process it.
 
