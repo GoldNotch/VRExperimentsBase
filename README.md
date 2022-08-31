@@ -10,7 +10,7 @@ Plugin requires some setup to work correctrly.
 3) Set Inputs in ProjectSettings:  
   - ActionMappings: RTrigger = {Vive(R) Trigger}, Walking  = {Vive(R) Trackpad Up}  
   - AxisMappings: CameraMove_RightLeft = {MouseX}, CameraMove_UpDown = {MouseY} - it's for debug, to launch game without headset  
-4) Create two SoundSubmixes in Content directory: CaptureSubmix and MuteSubmix. Link them in CaptureSubmix -> MuteSubmix way.And set OutputVolume in MuteSubmix to 0.0. They needs for sound recording.
+4) Create two SoundSubmixes in Content directory: CaptureSubmix and MuteSubmix. Link them in CaptureSubmix->MuteSubmix way.And set OutputVolume in MuteSubmix to 0.0. They needs for sound recording.
 5) Create ForceFeedbackEffect in Content Directory. Create a Curve. To understand why - read (this)[https://docs.unrealengine.com/4.27/en-US/InteractiveExperiences/ForceFeedback/]
 7) Create Informant blueprint class (inherit from BaseInformant). Set Controllers meshes (by default UE4 has HTC Controller Meshes)
 
