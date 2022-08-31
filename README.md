@@ -1,14 +1,18 @@
 # VRExperimentsBase  
 Plugin for Unreal Engine 4 to quick start VR project without C++ programming (in SciVI environment)  
 
-It provides VR character(BaseInformant) which has setuped VR headset, controllers and can interact to scene objects by default.  Also it collects information about EyeTrack and interactions and sends it in SciVi (via websocket).  
+It provides VR character(BaseInformant) which has setuped VR headset(Vive HTC Pro Eye), controllers and can interact to scene objects by default.  Also it collects information about EyeTrack and interactions and sends it in SciVi (via websocket).  
 
 # Editor setup  
 Plugin requires some setup to work correctrly.  
-1) Install plugin [JsonBlueprint](https://www.unrealengine.com/marketplace/en-US/product/json-blueprint) - it provides ability to construct and parse json messages in blueprint (SciVi Communination format is JSON)
-2) Set Inputs in ProjectSettings:  
+1) Install plugin [JsonBlueprint](https://www.unrealengine.com/marketplace/en-US/product/json-blueprint) to engine - it provides ability to construct and parse json messages in blueprint (SciVi Communination format is JSON)
+2) Install plugin (Vive SRanipal SDK for UE4)[https://developer.vive.com/resources/vive-sense/eye-and-facial-tracking-sdk/] to project
+3) Set Inputs in ProjectSettings:  
   - ActionMappings: RTrigger = {Vive(R) Trigger}, Walking  = {Vive(R) Trackpad Up}  
   - AxisMappings: CameraMove_RightLeft = {MouseX}, CameraMove_UpDown = {MouseY} - it's for debug, to launch game without headset  
+4) Create two SoundSubmixes in Content directory: CaptureSubmix and MuteSubmix. Link them in CaptureSubmix -> MuteSubmix way.And set OutputVolume in MuteSubmix to 0.0. They needs for sound recording.
+5) Create ForceFeedbackEffect in Content Directory. Create a Curve. To understand why - read (this)[https://docs.unrealengine.com/4.27/en-US/InteractiveExperiences/ForceFeedback/]
+7) Create Informant blueprint class (inherit from BaseInformant). Set Controllers meshes (by default UE4 has HTC Controller Meshes)
 
 # Interactions  
 BaseInformant can interact with actors scene by default. It provides some kinds of interaction: eye tracking, controller ray hover/leave actor, trigger pressed/released on actor, actor had close/far to informant.  
@@ -39,4 +43,3 @@ SciVi is platform for collecting data and experiment's controlling.
 VRGameMode class can communicate with SciVi via next mehtods:
 - SendToSciVi(FString json_message), where json_message is stringifed json object/value, where name of json is message ID. f.e "Gaze" : {<gaze data>}.
 - OnSciViMessageReceived(JsonObject msg_json) - event, calls when SciVi sends message as json value/object, where name of object is command and body of object is command's arguments. F.e. "HideController": "left". In Event you can understand which command you get and process it.
-
