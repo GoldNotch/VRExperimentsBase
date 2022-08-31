@@ -1,7 +1,13 @@
 # VRExperimentsBase  
 Plugin for Unreal Engine 4 to quick start VR project without C++ programming (in SciVI environment)  
 
-It provides VR character(BaseInformant) which has setuped VR headset(Vive HTC Pro Eye), controllers and can interact to scene objects by default.  Also it collects information about EyeTrack and interactions and sends it in SciVi (via websocket).  
+# Features
+1) Ready VR Character
+2) Interaction to scene actors with Controllers
+3) Microphone voice recording
+4) Vibrate with controllers
+5) Eye Tracking
+6) Communication with SciVi via Blueprint
 
 # Editor setup  
 Plugin requires some setup to work correctrly.  
