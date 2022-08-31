@@ -7,6 +7,7 @@
 #include "Components/WidgetInteractionComponent.h"
 #include "Components/ArrowComponent.h"
 #include "Components/SphereComponent.h"
+#include "Components/ForceFeedbackComponent.h"
 #include <AudioCaptureComponent.h>
 #include "SubmixRecorder.h"
 #include "SRanipal_API_Eye.h"
@@ -21,6 +22,7 @@
 ABaseInformant::ABaseInformant()
 {
 	static ConstructorHelpers::FObjectFinder<USoundSubmix> CaptureSubmixAsset(TEXT("SoundSubmix'/Game/CaptureSubmix.CaptureSubmix'"));
+	static ConstructorHelpers::FObjectFinder<UForceFeedbackEffect> ForceFeedbackAsset(TEXT("ForceFeedbackEffect'/Game/VibrationEffect.VibrationEffect'"));
 
  	// Set this character to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
@@ -71,6 +73,11 @@ ABaseInformant::ABaseInformant()
 	InteractionCollider = CreateDefaultSubobject<USphereComponent>(TEXT("InteractionCollider"));
 	InteractionCollider->SetupAttachment(RootComponent);
 	InteractionCollider->SetSphereRadius(InteractionDistance);
+
+	ForceFeedbackComponent = CreateDefaultSubobject<UForceFeedbackComponent>(TEXT("ForceFeedback"));
+	ForceFeedbackComponent->SetupAttachment(RootComponent);
+	ForceFeedbackComponent->ForceFeedbackEffect = ForceFeedbackAsset.Object;
+	ForceFeedbackComponent->bLooping = false;
 }
 
 // Called when the game starts or when spawned
@@ -221,6 +228,7 @@ void ABaseInformant::Tick(float DeltaTime)
 		}
 	}
 
+	//create trajectory for walking_teleport
 	if (bIsWalking)
 	{
 		FPredictProjectilePathParams params(HeightDeviance,
@@ -422,4 +430,11 @@ void ABaseInformant::SetInteractionDistance(float new_distance)
 	InteractionCollider->SetSphereRadius(new_distance);
 	MC_Left_Interaction_Lazer->InteractionDistance = InteractionDistance;
 	MC_Right_Interaction_Lazer->InteractionDistance = InteractionDistance;
+}
+
+void ABaseInformant::Vibrate()
+{
+	if (IsValid(ForceFeedbackComponent) && 
+		IsValid(ForceFeedbackComponent->ForceFeedbackEffect))
+	ForceFeedbackComponent->Play();
 }

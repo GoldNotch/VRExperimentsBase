@@ -59,6 +59,8 @@ public:
 	void SetInteractionDistance(float new_distance);
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	bool bIsWalkingEnabled = true;
+	UFUNCTION(BlueprintCallable)
+	void Vibrate();
 
 	UPROPERTY(EditAnywhere, BlueprintReadonly)
 	UCameraComponent* CameraComponent;
@@ -83,6 +85,9 @@ public:
 	class UAudioCaptureComponent* AudioCapture;
 	UPROPERTY(EditAnywhere, BlueprintReadonly)
 	class USubmixRecorder* RecorderComponent;
+
+	UPROPERTY(EditAnywhere, BlueprintReadonly)
+	class UForceFeedbackComponent* ForceFeedbackComponent;
 
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadonly)
