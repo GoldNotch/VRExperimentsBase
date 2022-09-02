@@ -5,6 +5,17 @@
 #include "VRGameModeBase.h"
 #include "UI_Blank.h"
 
+void AInteractableActor::BeginPlay()
+{
+	Super::BeginPlay();
+	if (IsValid(DragAndDropDestination)) {
+		DragAndDropDestination->OnActorBeginOverlap.AddDynamic
+		(this, &AInteractableActor::OnBeginOverlapWithDragAndDropDestination);
+		DragAndDropDestination->OnActorEndOverlap.AddDynamic
+		(this, &AInteractableActor::OnEndOverlapWithDragAndDropDestination);
+	}
+}
+
 //-------------------- Events -------------------
 
 void AInteractableActor::BeginOverlapByEyeTrack()
@@ -96,4 +107,96 @@ void AInteractableActor::HadCloseToPlayer()
 void AInteractableActor::HadFarToPlayer()
 {
 	HadFarToPlayer_BP();
+}
+
+//---------------------- Drag & Drop -----------------------------
+void AInteractableActor::OnDrag()
+{
+	TransformBeforeDrag = GetActorTransform();
+	SetActorRotation(FRotator(0.0f, 0.0f, 0.0f));
+	if (bSendLogsToSciVi) {
+		auto GM = Cast<AVRGameModeBase>(GetWorld()->GetAuthGameMode());
+		auto json = FString::Printf(TEXT("\"ControllerLog\": {"
+			"\"Action\": \"DragItem\","
+			"\"AOI\": \"%s\""
+			"}"),
+			*GetName());
+		GM->SendToSciVi(json);
+	}
+	OnDrag_BP();
+}
+
+void AInteractableActor::OnDrop()
+{
+	if (IsValid(DragAndDropDestination) && bActorInDragAndDropDestination)
+	{
+		if (bSendLogsToSciVi) {
+			auto GM = Cast<AVRGameModeBase>(GetWorld()->GetAuthGameMode());
+			auto loc = GetActorLocation();
+			auto json = FString::Printf(TEXT("\"ControllerLog\": {"
+				"\"Action\": \"DropItemInCorrectPlace\","
+				"\"AOI\": \"%s\","
+				"\"DropPosition\": [%f, %f, %f]"
+				"}"),
+				*GetName(), loc.X, loc.Y, loc.Z);
+			GM->SendToSciVi(json);
+		}
+		SetActorLocationAndRotation(DragAndDropDestination->GetActorLocation(),
+									DragAndDropDestination->GetActorRotation());
+	}
+	else
+	{
+		if (bSendLogsToSciVi) {
+			auto GM = Cast<AVRGameModeBase>(GetWorld()->GetAuthGameMode());
+			auto loc = GetActorLocation();
+			auto json = FString::Printf(TEXT("\"ControllerLog\": {"
+				"\"Action\": \"DropItemInWrongPlace\","
+				"\"AOI\": \"%s\","
+				"\"DropPosition\": [%f, %f, %f]"
+				"}"),
+				*GetName(), loc.X, loc.Y, loc.Z);
+			GM->SendToSciVi(json);
+		}
+		SetActorTransform(TransformBeforeDrag);
+	}
+	OnDrop_BP();
+	bActorInDragAndDropDestination = false;
+}
+
+void AInteractableActor::OnBeginOverlapWithDragAndDropDestination(AActor* OverlappedActor, AActor* OtherActor)
+{
+	bActorInDragAndDropDestination = true;
+}
+
+void AInteractableActor::OnEndOverlapWithDragAndDropDestination(AActor* OverlappedActor, AActor* OtherActor)
+{
+	bActorInDragAndDropDestination = false;
+}
+
+void AInteractableActor::PreEditChange(FProperty* PropertyAboutToChange)
+{
+	if (PropertyAboutToChange->GetFName() == GET_MEMBER_NAME_CHECKED(AInteractableActor, DragAndDropDestination))
+	{
+		if (IsValid(DragAndDropDestination)) 
+		{
+			DragAndDropDestination->OnActorBeginOverlap.Clear();
+			DragAndDropDestination->OnActorEndOverlap.Clear();
+		}
+		bActorInDragAndDropDestination = false;
+	}
+}
+
+void AInteractableActor::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
+{
+	FName PropertyName = (PropertyChangedEvent.Property != NULL) ? PropertyChangedEvent.Property->GetFName() : NAME_None;
+	if (PropertyName == GET_MEMBER_NAME_CHECKED(AInteractableActor, DragAndDropDestination)) 
+	{
+		if (IsValid(DragAndDropDestination)) {
+			DragAndDropDestination->OnActorBeginOverlap.AddDynamic
+				(this, &AInteractableActor::OnBeginOverlapWithDragAndDropDestination);
+			DragAndDropDestination->OnActorEndOverlap.AddDynamic
+				(this, &AInteractableActor::OnEndOverlapWithDragAndDropDestination);
+		}
+	}
+	Super::PostEditChangeProperty(PropertyChangedEvent);
 }

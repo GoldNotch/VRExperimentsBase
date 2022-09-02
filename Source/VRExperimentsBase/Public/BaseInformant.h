@@ -53,14 +53,11 @@ public:
 	UFUNCTION()
 	void StopRecording();
 	bool IsRecording() const;
-	UFUNCTION(BlueprintCallable)
-	FORCEINLINE float GetInteractionDistance() const { return InteractionDistance; }
-	UFUNCTION(BlueprintCallable)
-	void SetInteractionDistance(float new_distance);
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	bool bIsWalkingEnabled = true;
 	UFUNCTION(BlueprintCallable)
-	void Vibrate();
+	void Vibrate(float scale = 1.0f);
 
 	UPROPERTY(EditAnywhere, BlueprintReadonly)
 	UCameraComponent* CameraComponent;
@@ -87,7 +84,7 @@ public:
 	class USubmixRecorder* RecorderComponent;
 
 	UPROPERTY(EditAnywhere, BlueprintReadonly)
-	class UForceFeedbackComponent* ForceFeedbackComponent;
+	UHapticFeedbackEffect_Base* VibrationEffect;
 
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadonly)
@@ -104,6 +101,14 @@ protected:
 	void CameraMove_LeftRight(float value);
 	UFUNCTION()
 	void CameraMove_UpDown(float value);
+	UFUNCTION()
+	void DragActor_RHand();
+	UFUNCTION()
+	void DropActor_RHand();
+	UFUNCTION()
+	void DragActor_LHand();
+	UFUNCTION()
+	void DropActor_LHand();
 	float Yaw;
 	float CameraPitch;
 	//------------ Walking -----------------
@@ -120,8 +125,13 @@ protected:
 	class AInteractableActor* eye_tracked_actor = nullptr;
 	class AInteractableActor* actor_pointed_by_right_mc = nullptr;
 	class AInteractableActor* actor_pointed_by_left_mc = nullptr;
+	UPROPERTY(EditAnywhere, BlueprintReadonly)
 	float InteractionDistance = 1000.0f;
+	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
 
-
+	class AInteractableActor* DraggedActor_LHand = nullptr;
+	class AInteractableActor* DraggedActor_RHand = nullptr;
+	UPROPERTY(VisibleAnywhere, BlueprintReadonly)
+	float DragDistance = 50.0f;
 	
 };

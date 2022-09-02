@@ -22,7 +22,7 @@
 ABaseInformant::ABaseInformant()
 {
 	static ConstructorHelpers::FObjectFinder<USoundSubmix> CaptureSubmixAsset(TEXT("SoundSubmix'/Game/CaptureSubmix.CaptureSubmix'"));
-	static ConstructorHelpers::FObjectFinder<UForceFeedbackEffect> ForceFeedbackAsset(TEXT("ForceFeedbackEffect'/Game/VibrationEffect.VibrationEffect'"));
+	//static ConstructorHelpers::FObjectFinder<UHapticFeedbackEffect_Base> VibrationEffectAsset(TEXT("HapticFeedbackCurve'/Game/VibrationEffect.VibrationEffect'"));
 
  	// Set this character to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
@@ -73,11 +73,6 @@ ABaseInformant::ABaseInformant()
 	InteractionCollider = CreateDefaultSubobject<USphereComponent>(TEXT("InteractionCollider"));
 	InteractionCollider->SetupAttachment(RootComponent);
 	InteractionCollider->SetSphereRadius(InteractionDistance);
-
-	ForceFeedbackComponent = CreateDefaultSubobject<UForceFeedbackComponent>(TEXT("ForceFeedback"));
-	ForceFeedbackComponent->SetupAttachment(RootComponent);
-	ForceFeedbackComponent->ForceFeedbackEffect = ForceFeedbackAsset.Object;
-	ForceFeedbackComponent->bLooping = false;
 }
 
 // Called when the game starts or when spawned
@@ -169,93 +164,118 @@ void ABaseInformant::Tick(float DeltaTime)
 		}
 	}
 
-	//check right motion controller overlaps
-	{
-		FHitResult hitResult;
-		auto end = MC_Right->GetComponentLocation() + MC_Right->GetForwardVector() * InteractionDistance;
-		if (!MC_Right->bHiddenInGame && 
-			GM->RayTrace(this, MC_Right->GetComponentLocation(), end, hitResult))
+	//process right hand
+	if (!MC_Right->bHiddenInGame) {
+		//check right motion controller overlaps
 		{
-			if (hitResult.Actor != actor_pointed_by_right_mc)
+			FHitResult hitResult;
+			auto end = MC_Right->GetComponentLocation() + MC_Right->GetForwardVector() * InteractionDistance;
+			if (GM->RayTrace(this, MC_Right->GetComponentLocation(), end, hitResult))
+			{
+				if (hitResult.Actor != actor_pointed_by_right_mc)
+				{
+					if (IsValid(actor_pointed_by_right_mc) &&
+						actor_pointed_by_right_mc != actor_pointed_by_left_mc)
+						actor_pointed_by_right_mc->EndOverlapByController();
+					actor_pointed_by_right_mc = Cast<AInteractableActor>(hitResult.Actor);
+					if (IsValid(actor_pointed_by_right_mc) &&
+						actor_pointed_by_right_mc != actor_pointed_by_left_mc)
+						actor_pointed_by_right_mc->BeginOverlapByController();
+				}
+				if (IsValid(actor_pointed_by_right_mc))
+					actor_pointed_by_right_mc->InFocusByController(hitResult);
+			}
+			else
 			{
 				if (IsValid(actor_pointed_by_right_mc) &&
 					actor_pointed_by_right_mc != actor_pointed_by_left_mc)
 					actor_pointed_by_right_mc->EndOverlapByController();
-				actor_pointed_by_right_mc = Cast<AInteractableActor>(hitResult.Actor);
-				if (IsValid(actor_pointed_by_right_mc) && 
-					actor_pointed_by_right_mc != actor_pointed_by_left_mc)
-					actor_pointed_by_right_mc->BeginOverlapByController();
+				actor_pointed_by_right_mc = nullptr;
 			}
-			if (IsValid(actor_pointed_by_right_mc))
-				actor_pointed_by_right_mc->InFocusByController(hitResult);
 		}
-		else
+
+		//create trajectory for walking_teleport
+		if (bIsWalking)
 		{
-			if (IsValid(actor_pointed_by_right_mc) &&
-				actor_pointed_by_right_mc != actor_pointed_by_left_mc)
-				actor_pointed_by_right_mc->EndOverlapByController();
-			actor_pointed_by_right_mc = nullptr;
+			FPredictProjectilePathParams params(HeightDeviance,
+				MC_Right->GetComponentLocation(),
+				MC_Right->GetForwardVector() * 1000.0f, 2.0f,
+				ECollisionChannel::ECC_WorldStatic, { this });
+			params.DrawDebugType = EDrawDebugTrace::ForOneFrame;
+			FPredictProjectilePathResult result;
+			if (UGameplayStatics::PredictProjectilePath(GetWorld(), params, result)
+				&& result.HitResult.Location.Z < FloorHeight + HeightDeviance &&
+				result.HitResult.Location.Z >= FloorHeight - HeightDeviance)
+				newPosition = result.HitResult.Location;
+			else
+				newPosition = GetActorLocation();
+		}
+
+		//Process Drag&Drop with right hand
+		if (IsValid(DraggedActor_RHand))
+		{
+			const auto new_loc = MC_Right->GetComponentLocation() + MC_Right->GetForwardVector() * DragDistance;
+			DraggedActor_RHand->SetActorLocation(new_loc);
 		}
 	}
 
-	//check left motion controller overlaps
+	//process left hand
+	if (!MC_Left->bHiddenInGame) 
 	{
-		FHitResult hitResult;
-		auto end = MC_Left->GetComponentLocation() + MC_Left->GetForwardVector() * InteractionDistance;
-		if (!MC_Left->bHiddenInGame && 
-			GM->RayTrace(this, MC_Left->GetComponentLocation(), end, hitResult))
+		//check left motion controller overlaps
 		{
-			if (hitResult.Actor != actor_pointed_by_left_mc)
+			FHitResult hitResult;
+			auto end = MC_Left->GetComponentLocation() + MC_Left->GetForwardVector() * InteractionDistance;
+			if (GM->RayTrace(this, MC_Left->GetComponentLocation(), end, hitResult))
+			{
+				if (hitResult.Actor != actor_pointed_by_left_mc)
+				{
+					if (IsValid(actor_pointed_by_left_mc) &&
+						actor_pointed_by_left_mc != actor_pointed_by_right_mc)
+						actor_pointed_by_left_mc->EndOverlapByController();
+					actor_pointed_by_left_mc = Cast<AInteractableActor>(hitResult.Actor);
+					if (IsValid(actor_pointed_by_left_mc) &&
+						actor_pointed_by_left_mc != actor_pointed_by_right_mc)
+						actor_pointed_by_left_mc->BeginOverlapByController();
+				}
+				if (IsValid(actor_pointed_by_left_mc) &&
+					actor_pointed_by_left_mc != actor_pointed_by_right_mc)
+					actor_pointed_by_left_mc->InFocusByController(hitResult);
+			}
+			else
 			{
 				if (IsValid(actor_pointed_by_left_mc) &&
 					actor_pointed_by_left_mc != actor_pointed_by_right_mc)
 					actor_pointed_by_left_mc->EndOverlapByController();
-				actor_pointed_by_left_mc = Cast<AInteractableActor>(hitResult.Actor);
-				if (IsValid(actor_pointed_by_left_mc) &&
-					actor_pointed_by_left_mc != actor_pointed_by_right_mc)
-					actor_pointed_by_left_mc->BeginOverlapByController();
+				actor_pointed_by_left_mc = nullptr;
 			}
-			if (IsValid(actor_pointed_by_left_mc) && 
-				actor_pointed_by_left_mc != actor_pointed_by_right_mc)
-				actor_pointed_by_left_mc->InFocusByController(hitResult);
 		}
-		else
+
+		//Process Drag&Drop with right hand
+		if (IsValid(DraggedActor_LHand))
 		{
-			if (IsValid(actor_pointed_by_left_mc) &&
-				actor_pointed_by_left_mc != actor_pointed_by_right_mc)
-				actor_pointed_by_left_mc->EndOverlapByController();
-			actor_pointed_by_left_mc = nullptr;
+			const auto new_loc = MC_Left->GetComponentLocation() + MC_Left->GetForwardVector() * DragDistance;
+			DraggedActor_LHand->SetActorLocation(new_loc);
 		}
 	}
 
-	//create trajectory for walking_teleport
-	if (bIsWalking)
-	{
-		FPredictProjectilePathParams params(HeightDeviance,
-			MC_Right->GetComponentLocation(),
-			MC_Right->GetForwardVector() * 1000.0f, 2.0f, 
-			ECollisionChannel::ECC_WorldStatic, { this });
-		params.DrawDebugType = EDrawDebugTrace::ForOneFrame;
-		FPredictProjectilePathResult result;
-		if (UGameplayStatics::PredictProjectilePath(GetWorld(), params, result) 
-				&& result.HitResult.Location.Z < FloorHeight + HeightDeviance &&
-				result.HitResult.Location.Z >= FloorHeight - HeightDeviance)
-			newPosition = result.HitResult.Location;
-		else
-			newPosition = GetActorLocation();
-	}
+	
 }
 
 // Called to bind functionality to input
 void ABaseInformant::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
 	Super::SetupPlayerInputComponent(PlayerInputComponent);
-	InputComponent->BindAction("RTrigger", IE_Pressed, this, &ABaseInformant::OnRTriggerPressed);
-	InputComponent->BindAction("RTrigger", IE_Released, this, &ABaseInformant::OnRTriggerReleased);
-	InputComponent->BindAction("LTrigger", IE_Pressed, this, &ABaseInformant::OnLTriggerPressed);
-	InputComponent->BindAction("LTrigger", IE_Released, this, &ABaseInformant::OnLTriggerReleased);
+	InputComponent->BindAction("RController_Trigger", IE_Pressed, this, &ABaseInformant::OnRTriggerPressed);
+	InputComponent->BindAction("RController_Trigger", IE_Released, this, &ABaseInformant::OnRTriggerReleased);
+	InputComponent->BindAction("LController_Trigger", IE_Pressed, this, &ABaseInformant::OnLTriggerPressed);
+	InputComponent->BindAction("LController_Trigger", IE_Released, this, &ABaseInformant::OnLTriggerReleased);
 	InputComponent->BindAction("Walking", IE_Pressed, this, &ABaseInformant::Walking_Trajectory);
 	InputComponent->BindAction("Walking", IE_Released, this, &ABaseInformant::Walking_Teleport);
+	InputComponent->BindAction("RController_Grip", IE_Pressed, this, &ABaseInformant::DragActor_RHand);
+	InputComponent->BindAction("RController_Grip", IE_Released, this, &ABaseInformant::DropActor_RHand);
+	InputComponent->BindAction("LController_Grip", IE_Pressed, this, &ABaseInformant::DragActor_LHand);
+	InputComponent->BindAction("LController_Grip", IE_Released, this, &ABaseInformant::DropActor_LHand);
 	InputComponent->BindAxis("CameraMove_RightLeft", this, &ABaseInformant::CameraMove_LeftRight);
 	InputComponent->BindAxis("CameraMove_UpDown", this, &ABaseInformant::CameraMove_UpDown);
 }
@@ -327,6 +347,62 @@ void ABaseInformant::CameraMove_UpDown(float value)
 	CameraComponent->SetRelativeRotation(FRotator(CameraPitch, 0.0f, 0.0f));
 }
 
+void ABaseInformant::DragActor_RHand()
+{
+	if (!MC_Right->bHiddenInGame)
+	{
+		FGaze gaze;
+		GetGaze(gaze);
+		auto GM = GetWorld()->GetAuthGameMode<AVRGameModeBase>();
+		FVector trigger_ray = MC_Right->GetComponentLocation() +
+			MC_Right->GetForwardVector() * DragDistance;
+		FHitResult hitPoint(ForceInit);
+		if (GM->RayTrace(this, MC_Right->GetComponentLocation(), trigger_ray, hitPoint))
+		{
+			auto actor = Cast<AInteractableActor>(hitPoint.Actor);
+			if (IsValid(actor) && actor->bIsDraggable) {
+				DraggedActor_RHand = actor;
+				DraggedActor_RHand->OnDrag();
+			}
+		}
+	}
+}
+
+void ABaseInformant::DropActor_RHand()
+{
+	if (IsValid(DraggedActor_RHand))
+		DraggedActor_RHand->OnDrop();
+	DraggedActor_RHand = nullptr;
+}
+
+void ABaseInformant::DragActor_LHand()
+{
+	if (!MC_Left->bHiddenInGame)
+	{
+		FGaze gaze;
+		GetGaze(gaze);
+		auto GM = GetWorld()->GetAuthGameMode<AVRGameModeBase>();
+		FVector trigger_ray = MC_Left->GetComponentLocation() +
+			MC_Left->GetForwardVector() * DragDistance;
+		FHitResult hitPoint(ForceInit);
+		if (GM->RayTrace(this, MC_Left->GetComponentLocation(), trigger_ray, hitPoint))
+		{
+			auto actor = Cast<AInteractableActor>(hitPoint.Actor);
+			if (IsValid(actor) && actor->bIsDraggable) {
+				DraggedActor_LHand = actor;
+				DraggedActor_LHand->OnDrag();
+			}
+		}
+	}
+}
+
+void ABaseInformant::DropActor_LHand()
+{
+	if (IsValid(DraggedActor_LHand))
+		DraggedActor_LHand->OnDrop();
+	DraggedActor_LHand = nullptr;
+}
+
 void ABaseInformant::Walking_Trajectory()
 {
 	if (!MC_Right->bHiddenInGame && bIsWalkingEnabled && !bIsWalking)
@@ -357,6 +433,17 @@ void ABaseInformant::Walking_Teleport()
 					Cast<AInteractableActor>(actor)->HadCloseToPlayer();
 			}
 		}
+	}
+}
+
+void ABaseInformant::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
+{
+	FName PropertyName = (PropertyChangedEvent.Property != NULL) ? PropertyChangedEvent.Property->GetFName() : NAME_None;
+	if (PropertyName == GET_MEMBER_NAME_CHECKED(ABaseInformant, InteractionDistance))
+	{
+		InteractionCollider->SetSphereRadius(InteractionDistance);
+		MC_Left_Interaction_Lazer->InteractionDistance = InteractionDistance;
+		MC_Right_Interaction_Lazer->InteractionDistance = InteractionDistance;
 	}
 }
 
@@ -424,17 +511,13 @@ bool ABaseInformant::IsRecording() const
 	return RecorderComponent->IsRecording();
 }
 
-void ABaseInformant::SetInteractionDistance(float new_distance)
+void ABaseInformant::Vibrate(float scale)
 {
-	InteractionDistance = new_distance;
-	InteractionCollider->SetSphereRadius(new_distance);
-	MC_Left_Interaction_Lazer->InteractionDistance = InteractionDistance;
-	MC_Right_Interaction_Lazer->InteractionDistance = InteractionDistance;
-}
-
-void ABaseInformant::Vibrate()
-{
-	if (IsValid(ForceFeedbackComponent) && 
-		IsValid(ForceFeedbackComponent->ForceFeedbackEffect))
-	ForceFeedbackComponent->Play();
+	if (GetWorld()->GetFirstPlayerController() == GetController())
+	{
+		if (!MC_Left->bHiddenInGame)
+			GetController<APlayerController>()->PlayHapticEffect(VibrationEffect, EControllerHand::Left, scale);
+		if (!MC_Right->bHiddenInGame)
+			GetController<APlayerController>()->PlayHapticEffect(VibrationEffect, EControllerHand::Right, scale);
+	}
 }

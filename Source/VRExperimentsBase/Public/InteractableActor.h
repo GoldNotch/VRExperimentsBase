@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
 #include "BaseInformant.h"
+#include "Engine/TriggerBox.h"
 #include "InteractableActor.generated.h"
 
 UCLASS()
@@ -13,8 +14,15 @@ class VREXPERIMENTSBASE_API AInteractableActor : public AActor
 	GENERATED_BODY()
 	
 public:
+	virtual void BeginPlay() override;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	bool bSendLogsToSciVi = true;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	bool bIsDraggable = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	ATriggerBox* DragAndDropDestination = nullptr;
 
 	//trigger interaction
 	virtual void OnPressedByTrigger(const FHitResult& hitResult);
@@ -30,6 +38,9 @@ public:
 	//distance
 	virtual void HadCloseToPlayer();
 	virtual void HadFarToPlayer();
+	//Drag&Drop
+	virtual void OnDrag();
+	virtual void OnDrop();
 
 protected:
 	UFUNCTION(BlueprintImplementableEvent, meta = (DisplayName = "HadEyeFocus"))
@@ -54,4 +65,19 @@ protected:
 	void HadCloseToPlayer_BP();
 	UFUNCTION(BlueprintImplementableEvent, meta = (DisplayName = "HadFarToPlayer"))
 	void HadFarToPlayer_BP();
+	UFUNCTION(BlueprintImplementableEvent, meta = (DisplayName = "OnDrag"))
+	void OnDrag_BP();
+	UFUNCTION(BlueprintImplementableEvent, meta = (DisplayName = "OnDrop"))
+	void OnDrop_BP();
+
+	UFUNCTION()
+	void OnBeginOverlapWithDragAndDropDestination(AActor* OverlappedActor, AActor* OtherActor);
+	UFUNCTION()
+	void OnEndOverlapWithDragAndDropDestination(AActor* OverlappedActor, AActor* OtherActor);
+	virtual void PreEditChange(FProperty* PropertyAboutToChange) override;
+	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
+
+
+	FTransform TransformBeforeDrag;
+	bool bActorInDragAndDropDestination = false;
 };
