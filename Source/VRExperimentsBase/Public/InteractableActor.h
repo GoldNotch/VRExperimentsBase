@@ -68,7 +68,7 @@ protected:
 	UFUNCTION(BlueprintImplementableEvent, meta = (DisplayName = "OnDrag"))
 	void OnDrag_BP();
 	UFUNCTION(BlueprintImplementableEvent, meta = (DisplayName = "OnDrop"))
-	void OnDrop_BP();
+	void OnDrop_BP(bool IsInDestination);
 
 	UFUNCTION()
 	void OnBeginOverlapWithDragAndDropDestination(AActor* OverlappedActor, AActor* OtherActor);

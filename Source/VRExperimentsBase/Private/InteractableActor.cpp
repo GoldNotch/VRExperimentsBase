@@ -128,6 +128,7 @@ void AInteractableActor::OnDrag()
 
 void AInteractableActor::OnDrop()
 {
+	bool IsInDestination = false;;
 	if (IsValid(DragAndDropDestination) && bActorInDragAndDropDestination)
 	{
 		if (bSendLogsToSciVi) {
@@ -143,6 +144,7 @@ void AInteractableActor::OnDrop()
 		}
 		SetActorLocationAndRotation(DragAndDropDestination->GetActorLocation(),
 									DragAndDropDestination->GetActorRotation());
+		IsInDestination = true;
 	}
 	else
 	{
@@ -159,7 +161,7 @@ void AInteractableActor::OnDrop()
 		}
 		SetActorTransform(TransformBeforeDrag);
 	}
-	OnDrop_BP();
+	OnDrop_BP(IsInDestination);
 	bActorInDragAndDropDestination = false;
 }
 
