@@ -28,11 +28,11 @@ public:
 	virtual void OnPressedByTrigger(const FHitResult& hitResult);
 	virtual void OnReleasedByTrigger(const FHitResult& hitResult);
 	//eye track interaction
-	virtual void BeginOverlapByEyeTrack();
+	virtual void BeginOverlapByEyeTrack(const FGaze& gaze, const FHitResult& hitResult);
 	virtual void ProcessEyeTrack(const FGaze& gaze, const FHitResult& hitResult);
 	virtual void EndOverlapByEyeTrack();
 	//controller interaction
-	virtual void BeginOverlapByController();
+	virtual void BeginOverlapByController(const FHitResult& hitResult);
 	virtual void InFocusByController(const FHitResult& hitResult);
 	virtual void EndOverlapByController();
 	//distance
@@ -44,7 +44,7 @@ public:
 
 protected:
 	UFUNCTION(BlueprintImplementableEvent, meta = (DisplayName = "HadEyeFocus"))
-	void BeginOverlapByEyeTrack_BP();
+	void BeginOverlapByEyeTrack_BP(const FGaze& gaze, const FHitResult& hitResult);
 	UFUNCTION(BlueprintImplementableEvent, meta = (DisplayName = "EyeTrackTick"))
 	void ProcessEyeTrack_BP(const FGaze& gaze, const FHitResult& hitResult);
 	UFUNCTION(BlueprintImplementableEvent, meta = (DisplayName = "LostEyeFocus"))
@@ -56,7 +56,7 @@ protected:
 	void OnReleasedByTrigger_BP(const FHitResult& hitResult);
 
 	UFUNCTION(BlueprintImplementableEvent, meta = (DisplayName = "HadControllerFocus"))
-	void BeginOverlapByController_BP();
+	void BeginOverlapByController_BP(const FHitResult& hitResult);
 	UFUNCTION(BlueprintImplementableEvent, meta = (DisplayName = "ControllerFocusTick"))
 	void InFocusByController_BP(const FHitResult& hitResult);
 	UFUNCTION(BlueprintImplementableEvent, meta = (DisplayName = "LostControllerFocus"))

@@ -151,7 +151,7 @@ void ABaseInformant::Tick(float DeltaTime)
 					eye_tracked_actor->EndOverlapByEyeTrack();
 				eye_tracked_actor = Cast<AInteractableActor>(hitPoint.Actor);
 				if (IsValid(eye_tracked_actor))
-					eye_tracked_actor->BeginOverlapByEyeTrack();
+					eye_tracked_actor->BeginOverlapByEyeTrack(gaze, hitPoint);
 			}
 			if (IsValid(eye_tracked_actor))
 				eye_tracked_actor->ProcessEyeTrack(gaze, hitPoint);
@@ -180,7 +180,7 @@ void ABaseInformant::Tick(float DeltaTime)
 					actor_pointed_by_right_mc = Cast<AInteractableActor>(hitResult.Actor);
 					if (IsValid(actor_pointed_by_right_mc) &&
 						actor_pointed_by_right_mc != actor_pointed_by_left_mc)
-						actor_pointed_by_right_mc->BeginOverlapByController();
+						actor_pointed_by_right_mc->BeginOverlapByController(hitResult);
 				}
 				if (IsValid(actor_pointed_by_right_mc))
 					actor_pointed_by_right_mc->InFocusByController(hitResult);
@@ -236,7 +236,7 @@ void ABaseInformant::Tick(float DeltaTime)
 					actor_pointed_by_left_mc = Cast<AInteractableActor>(hitResult.Actor);
 					if (IsValid(actor_pointed_by_left_mc) &&
 						actor_pointed_by_left_mc != actor_pointed_by_right_mc)
-						actor_pointed_by_left_mc->BeginOverlapByController();
+						actor_pointed_by_left_mc->BeginOverlapByController(hitResult);
 				}
 				if (IsValid(actor_pointed_by_left_mc) &&
 					actor_pointed_by_left_mc != actor_pointed_by_right_mc)

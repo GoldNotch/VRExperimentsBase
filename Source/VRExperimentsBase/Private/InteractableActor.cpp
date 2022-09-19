@@ -18,9 +18,9 @@ void AInteractableActor::BeginPlay()
 
 //-------------------- Events -------------------
 
-void AInteractableActor::BeginOverlapByEyeTrack()
+void AInteractableActor::BeginOverlapByEyeTrack(const FGaze& gaze, const FHitResult& hitResult)
 {
-	BeginOverlapByEyeTrack_BP();
+	BeginOverlapByEyeTrack_BP(gaze, hitResult);
 }
 
 void AInteractableActor::ProcessEyeTrack(const FGaze& gaze, const FHitResult& hitResult)
@@ -32,12 +32,13 @@ void AInteractableActor::ProcessEyeTrack(const FGaze& gaze, const FHitResult& hi
 			"\"origin\": [%f, %f, %f],"
 			"\"direction\": [%f, %f, %f],"
 			"\"lpdmm\": %F, \"rpdmm\": %F,"
-			"\"AOI\": \"%s\""
+			"\"AOI\": \"%s\","
+			"\"AOI_Component\": \"%s\""
 			"}"),
 			gaze.origin.X, gaze.origin.Y, gaze.origin.Z,
 			gaze.direction.X, gaze.direction.Y, gaze.direction.Z,
 			gaze.left_pupil_diameter_mm, gaze.right_pupil_diameter_mm,
-			*GetName());
+			*GetName(), *hitResult.Component->GetName());
 		GM->SendToSciVi(json);
 	}
 }
@@ -75,9 +76,9 @@ void AInteractableActor::OnReleasedByTrigger(const FHitResult& hitResult)
 	}
 }
 
-void AInteractableActor::BeginOverlapByController()
+void AInteractableActor::BeginOverlapByController(const FHitResult& hitResult)
 {
-	BeginOverlapByController_BP();
+	BeginOverlapByController_BP(hitResult);
 }
 
 void AInteractableActor::InFocusByController(const FHitResult& hitResult)
