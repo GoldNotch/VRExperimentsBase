@@ -58,9 +58,8 @@ public:
 
 	// ----------------------- SciVi networking--------------
 public:
-	void SendToSciVi(const FString& message);
 	UFUNCTION(BlueprintCallable, DisplayName = "SendToSciVi")
-	void SendToSciVi_BP(const FBlueprintJsonObject& message);
+	void SendToSciVi(const FString& message);
 	UFUNCTION(BlueprintImplementableEvent, DisplayName = "OnSciViMessageReceived")
 	void OnSciViMessageReceived_BP(const FBlueprintJsonObject& msgJson);
 protected:

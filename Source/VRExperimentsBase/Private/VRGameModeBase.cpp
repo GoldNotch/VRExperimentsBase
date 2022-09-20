@@ -146,11 +146,6 @@ void AVRGameModeBase::SendToSciVi(const FString& message)
         connection->send(TCHAR_TO_UTF8(*msg));
 }
 
-void AVRGameModeBase::SendToSciVi_BP(const FBlueprintJsonObject& message)
-{
-    SendToSciVi(UBlueprintJsonLibrary::Conv_JsonObjectToString(message));
-}
-
 void AVRGameModeBase::OnSciViMessageReceived(TSharedPtr<FJsonObject> msgJson)
 {
     FBlueprintJsonObject blueprint_json;
