@@ -74,9 +74,10 @@ protected:
 	void OnBeginOverlapWithDragAndDropDestination(AActor* OverlappedActor, AActor* OtherActor);
 	UFUNCTION()
 	void OnEndOverlapWithDragAndDropDestination(AActor* OverlappedActor, AActor* OtherActor);
+#if WITH_EDITOR
 	virtual void PreEditChange(FProperty* PropertyAboutToChange) override;
 	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
-
+#endif
 
 	FTransform TransformBeforeDrag;
 	bool bActorInDragAndDropDestination = false;

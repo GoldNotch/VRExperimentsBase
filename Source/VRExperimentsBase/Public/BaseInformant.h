@@ -131,8 +131,9 @@ protected:
 	class AInteractableActor* eye_tracked_actor = nullptr;
 	class AInteractableActor* actor_pointed_by_right_mc = nullptr;
 	class AInteractableActor* actor_pointed_by_left_mc = nullptr;
+#if WITH_EDITOR
 	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
-
+#endif
 	class AInteractableActor* DraggedActor_LHand = nullptr;
 	class AInteractableActor* DraggedActor_RHand = nullptr;
 	

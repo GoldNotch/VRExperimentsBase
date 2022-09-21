@@ -80,7 +80,7 @@ void ABaseInformant::BeginPlay()
 {
 	Super::BeginPlay();
 	UHeadMountedDisplayFunctionLibrary::SetTrackingOrigin(EHMDTrackingOrigin::Floor);
-
+	Yaw = GetActorRotation().Yaw;
 	if (!RecorderComponent->SubmixToRecord) 
 	{
 		RecorderComponent->SubmixToRecord = dynamic_cast<USoundSubmix*>(AudioCapture->SoundSubmix);
@@ -436,6 +436,7 @@ void ABaseInformant::Walking_Teleport()
 	}
 }
 
+#if WITH_EDITOR
 void ABaseInformant::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
 {
 	FName PropertyName = (PropertyChangedEvent.Property != NULL) ? PropertyChangedEvent.Property->GetFName() : NAME_None;
@@ -446,7 +447,7 @@ void ABaseInformant::PostEditChangeProperty(FPropertyChangedEvent& PropertyChang
 		MC_Right_Interaction_Lazer->InteractionDistance = InteractionDistance;
 	}
 }
-
+#endif
 // ---------------------- Public API ---------------------
 
 void ABaseInformant::SetVisibility_MC_Right(bool visibility)
@@ -487,8 +488,12 @@ void ABaseInformant::GetGaze(FGaze& gaze) const
     ViveSR::anipal::Eye::VerboseData vd;
     instance->GetVerboseData(vd);
 	instance->GetGazeRay(GazeIndex::COMBINE, gaze.origin, gaze.direction);
-	gaze.origin = CameraComponent->GetComponentTransform().TransformPosition(gaze.origin);
-	gaze.direction = CameraComponent->GetComponentTransform().TransformVector(gaze.direction);
+	FRotator HMD_orient;
+	FVector HMD_pos;
+	UHeadMountedDisplayFunctionLibrary::GetOrientationAndPosition(HMD_orient, HMD_pos);
+
+	gaze.origin = GetTransform().TransformPosition(HMD_pos);
+	gaze.direction = GetTransform().TransformVector(HMD_orient.RotateVector(gaze.direction));
 	gaze.left_pupil_diameter_mm = vd.left.pupil_diameter_mm;
 	gaze.left_pupil_openness = vd.left.eye_openness;
 	gaze.right_pupil_diameter_mm = vd.right.pupil_diameter_mm;

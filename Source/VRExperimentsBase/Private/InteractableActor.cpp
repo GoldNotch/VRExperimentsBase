@@ -175,7 +175,7 @@ void AInteractableActor::OnEndOverlapWithDragAndDropDestination(AActor* Overlapp
 {
 	bActorInDragAndDropDestination = false;
 }
-
+#if WITH_EDITOR
 void AInteractableActor::PreEditChange(FProperty* PropertyAboutToChange)
 {
 	if (PropertyAboutToChange->GetFName() == GET_MEMBER_NAME_CHECKED(AInteractableActor, DragAndDropDestination))
@@ -203,3 +203,4 @@ void AInteractableActor::PostEditChangeProperty(FPropertyChangedEvent& PropertyC
 	}
 	Super::PostEditChangeProperty(PropertyChangedEvent);
 }
+#endif
