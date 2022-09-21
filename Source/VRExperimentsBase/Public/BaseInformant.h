@@ -121,17 +121,20 @@ protected:
 	float HeightDeviance = 5.0f;
 	float FloorHeight = 0.0f;
 	//------------ Interaction ----------------
+public:
+	UPROPERTY(EditAnywhere, BlueprintReadonly)
+	float InteractionDistance = 1000.0f;
+	UPROPERTY(VisibleAnywhere, BlueprintReadonly)
+	float DragDistance = 50.0f;
+protected:
 	TSet<AActor*> close_actors;
 	class AInteractableActor* eye_tracked_actor = nullptr;
 	class AInteractableActor* actor_pointed_by_right_mc = nullptr;
 	class AInteractableActor* actor_pointed_by_left_mc = nullptr;
-	UPROPERTY(EditAnywhere, BlueprintReadonly)
-	float InteractionDistance = 1000.0f;
 	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
 
 	class AInteractableActor* DraggedActor_LHand = nullptr;
 	class AInteractableActor* DraggedActor_RHand = nullptr;
-	UPROPERTY(VisibleAnywhere, BlueprintReadonly)
-	float DragDistance = 50.0f;
+	
 	
 };
