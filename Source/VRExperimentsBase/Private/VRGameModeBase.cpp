@@ -137,7 +137,7 @@ void AVRGameModeBase::initWS()
     m_serverThread = MakeUnique<std::thread>(&AVRGameModeBase::wsRun, this);
 }
 
-void AVRGameModeBase::SendToSciVi(FString& message)
+void AVRGameModeBase::SendToSciVi(const FString& message)
 {
     auto t = FDateTime::Now();
     int64 time = t.ToUnixTimestamp() * 1000 + t.GetMillisecond();
@@ -148,5 +148,7 @@ void AVRGameModeBase::SendToSciVi(FString& message)
 
 void AVRGameModeBase::OnSciViMessageReceived(TSharedPtr<FJsonObject> msgJson)
 {
-
+    FBlueprintJsonObject blueprint_json;
+    blueprint_json.Object = msgJson;
+    OnSciViMessageReceived_BP(blueprint_json);
 }

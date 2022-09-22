@@ -34,6 +34,7 @@ public class VRExperimentsBase : ModuleRules
 				"UMG", "Slate", "SlateCore",
 				"SRanipal", "SRanipalEye","HeadMountedDisplay",
 				"AudioCapture", "SignalProcessing",
+				"BlueprintJson"
 				// ... add other public dependencies that you statically link with here ...
 			}
 			);
