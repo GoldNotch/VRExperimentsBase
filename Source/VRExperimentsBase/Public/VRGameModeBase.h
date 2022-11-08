@@ -43,6 +43,23 @@ public:
 	UFUNCTION(BlueprintCallable)
 	bool RayTrace(const AActor* ignoreActor, const FVector& origin, const FVector& end, FHitResult& hitResult);
 	
+	UFUNCTION(BlueprintCallable, Category = "SciVi")
+	void StartExperiment();
+	UFUNCTION(BlueprintCallable, Category = "SciVi")
+	FORCEINLINE bool IsExperimentStarted() { return bExperimentStarted; }
+	UFUNCTION(BlueprintCallable, Category = "SciVi")
+	void FinishExperiment(int code, const FString& message);
+	virtual void OnExperimentStarted();
+	virtual void OnExperimentFinished(int code, const FString& message);
+	UFUNCTION(BlueprintImplementableEvent, Category = "SciVi", DisplayName = "OnExperimentStarted")
+	void OnExperimentStarted_BP();
+	UFUNCTION(BlueprintImplementableEvent, Category = "SciVi", DisplayName = "OnExperimentFinished")
+	void OnExperimentFinished_BP(int code, const FString& message);
+	UFUNCTION(BlueprintImplementableEvent, Category = "SciVi")
+	void OnSciViConnected();
+	UFUNCTION(BlueprintImplementableEvent, Category = "SciVi")
+	void OnSciViDisconnected();
+
 
 protected:
 	UPROPERTY()
@@ -70,5 +87,6 @@ protected:
 	WSServer m_server;
 	TUniquePtr<std::thread> m_serverThread = nullptr;//you can't use std::thread in UE4, because ue4 can't destroy it then game is exiting
 	TQueue<FString> message_queue;
+	FThreadSafeBool bExperimentStarted = false;
 	
 };

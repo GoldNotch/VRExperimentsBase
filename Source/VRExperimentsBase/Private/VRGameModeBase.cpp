@@ -6,6 +6,7 @@
 #include "SRanipalEye_Framework.h"
 #include "SRanipal_API_Eye.h"
 #include "InteractableActor.h"
+#include "EngineUtils.h"
 #include "Kismet/GameplayStatics.h"//for PredictProjectilePath
 
 AVRGameModeBase::AVRGameModeBase(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer)
@@ -92,6 +93,36 @@ bool AVRGameModeBase::RayTrace(const AActor* ignoreActor, const FVector& origin,
     }
 }
 
+void AVRGameModeBase::StartExperiment()
+{
+    bExperimentStarted = true;
+    OnExperimentStarted();
+    for (TActorIterator<AInteractableActor> It(GetWorld(), AInteractableActor::StaticClass()); It; ++It)
+        It->OnExperimentStarted();
+    for (TActorIterator<ABaseInformant> It(GetWorld(), ABaseInformant::StaticClass()); It; ++It)
+        It->OnExperimentStarted();
+}
+
+void AVRGameModeBase::FinishExperiment(int code, const FString& message)
+{
+    bExperimentStarted = false;
+    OnExperimentFinished(code, message);
+    for (TActorIterator<AInteractableActor> It(GetWorld(), AInteractableActor::StaticClass()); It; ++It)
+        It->OnExperimentFinished();
+    for (TActorIterator<ABaseInformant> It(GetWorld(), ABaseInformant::StaticClass()); It; ++It)
+        It->OnExperimentFinished();
+}
+
+void AVRGameModeBase::OnExperimentStarted()
+{
+    OnExperimentStarted_BP();
+}
+
+void AVRGameModeBase::OnExperimentFinished(int code, const FString& message)
+{
+    OnExperimentFinished_BP(code, message);
+}
+
 // ---------------------- VR ------------------------
 
 void AVRGameModeBase::CalibrateVR()
@@ -114,14 +145,16 @@ void AVRGameModeBase::initWS()
         message_queue.Enqueue(str);
     };
 
-    ep.on_open = [](std::shared_ptr<WSServer::Connection> connection)
+    ep.on_open = [this](std::shared_ptr<WSServer::Connection> connection)
     {
         UE_LOG(LogTemp, Display, TEXT("WebSocket: Opened"));
+        OnSciViConnected();
     };
 
-    ep.on_close = [](std::shared_ptr<WSServer::Connection> connection, int status, const std::string&)
+    ep.on_close = [this](std::shared_ptr<WSServer::Connection> connection, int status, const std::string&)
     {
         UE_LOG(LogTemp, Display, TEXT("WebSocket: Closed"));
+        OnSciViDisconnected();
     };
 
     ep.on_handshake = [](std::shared_ptr<WSServer::Connection>, SimpleWeb::CaseInsensitiveMultimap&)

@@ -56,6 +56,8 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	bool bIsWalkingEnabled = true;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	bool bUseMouseControlling = false;
 	UFUNCTION(BlueprintCallable)
 	void Vibrate(float scale = 1.0f);
 
@@ -86,9 +88,17 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadonly)
 	UHapticFeedbackEffect_Base* VibrationEffect;
 
+	virtual void OnExperimentStarted();
+	virtual void OnExperimentFinished();
+
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadonly)
 	class USphereComponent* InteractionCollider;
+	UFUNCTION(BlueprintImplementableEvent, meta = (DisplayName = "OnExperimentStarted"))
+	void OnExperimentStarted_BP();
+	UFUNCTION(BlueprintImplementableEvent, meta = (DisplayName = "OnExperimentFinished"))
+	void OnExperimentFinished_BP();
+
 	UFUNCTION()
 	void OnRTriggerPressed();
 	UFUNCTION()

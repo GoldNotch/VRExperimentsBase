@@ -24,7 +24,7 @@ ABaseInformant::ABaseInformant()
 	static ConstructorHelpers::FObjectFinder<USoundSubmix> CaptureSubmixAsset(TEXT("SoundSubmix'/Game/CaptureSubmix.CaptureSubmix'"));
 	//static ConstructorHelpers::FObjectFinder<UHapticFeedbackEffect_Base> VibrationEffectAsset(TEXT("HapticFeedbackCurve'/Game/VibrationEffect.VibrationEffect'"));
 
- 	// Set this character to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
+	// Set this character to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
 	PrimaryActorTick.TickInterval = 0.001f;//every millisecond
 	// Take control of the default player
@@ -81,7 +81,7 @@ void ABaseInformant::BeginPlay()
 	Super::BeginPlay();
 	UHeadMountedDisplayFunctionLibrary::SetTrackingOrigin(EHMDTrackingOrigin::Floor);
 	Yaw = GetActorRotation().Yaw;
-	if (!RecorderComponent->SubmixToRecord) 
+	if (!RecorderComponent->SubmixToRecord)
 	{
 		RecorderComponent->SubmixToRecord = dynamic_cast<USoundSubmix*>(AudioCapture->SoundSubmix);
 	}
@@ -114,7 +114,7 @@ void ABaseInformant::BeginPlay()
 		FFileHelper::SaveArrayToFile(arr, TEXT("aud.wav"));*/
 		auto b64pcm = FBase64::Encode((uint8_t*)AudioData, NumSamples * sizeof(int16));
 		auto json = FString::Printf(TEXT("\"WAV\": {\"SampleRate\": %i,"
-					"\"PCM\": \"data:audio/wav;base64,%s\"}"),  SampleRate, *b64pcm);
+			"\"PCM\": \"data:audio/wav;base64,%s\"}"), SampleRate, *b64pcm);
 		GM->SendToSciVi(json);
 	};
 	RecorderComponent->OnRecordFinished = [this]()
@@ -220,7 +220,7 @@ void ABaseInformant::Tick(float DeltaTime)
 	}
 
 	//process left hand
-	if (!MC_Left->bHiddenInGame) 
+	if (!MC_Left->bHiddenInGame)
 	{
 		//check left motion controller overlaps
 		{
@@ -259,7 +259,7 @@ void ABaseInformant::Tick(float DeltaTime)
 		}
 	}
 
-	
+
 }
 
 // Called to bind functionality to input
@@ -276,11 +276,23 @@ void ABaseInformant::SetupPlayerInputComponent(UInputComponent* PlayerInputCompo
 	InputComponent->BindAction("RController_Grip", IE_Released, this, &ABaseInformant::DropActor_RHand);
 	InputComponent->BindAction("LController_Grip", IE_Pressed, this, &ABaseInformant::DragActor_LHand);
 	InputComponent->BindAction("LController_Grip", IE_Released, this, &ABaseInformant::DropActor_LHand);
-	InputComponent->BindAxis("CameraMove_RightLeft", this, &ABaseInformant::CameraMove_LeftRight);
-	InputComponent->BindAxis("CameraMove_UpDown", this, &ABaseInformant::CameraMove_UpDown);
+	if (bUseMouseControlling) {
+		InputComponent->BindAxis("CameraMove_RightLeft", this, &ABaseInformant::CameraMove_LeftRight);
+		InputComponent->BindAxis("CameraMove_UpDown", this, &ABaseInformant::CameraMove_UpDown);
+	}
 }
 
 //------------------- Input Events ----------------------
+
+void ABaseInformant::OnExperimentStarted()
+{
+	OnExperimentStarted_BP();
+}
+
+void ABaseInformant::OnExperimentFinished()
+{
+	OnExperimentFinished_BP();
+}
 
 void ABaseInformant::OnRTriggerPressed()
 {
@@ -327,9 +339,9 @@ void ABaseInformant::OnRTriggerReleased()
 	MC_Right_Interaction_Lazer->ReleasePointerKey(LMB);
 }
 
-void ABaseInformant::OnLTriggerPressed(){}
+void ABaseInformant::OnLTriggerPressed() {}
 
-void ABaseInformant::OnLTriggerReleased(){}
+void ABaseInformant::OnLTriggerReleased() {}
 
 void ABaseInformant::CameraMove_LeftRight(float value)
 {
@@ -416,7 +428,7 @@ void ABaseInformant::Walking_Teleport()
 	if (bIsWalking) {
 		bIsWalking = false;
 		newPosition.Z = GetActorLocation().Z;
-		if ((newPosition - GetActorLocation()).Size() >= 10.0f) 
+		if ((newPosition - GetActorLocation()).Size() >= 10.0f)
 		{
 			SetActorLocation(newPosition);
 			//check actors to interact
@@ -485,8 +497,8 @@ void ABaseInformant::SetVisibility_MC_Left(bool visibility)
 void ABaseInformant::GetGaze(FGaze& gaze) const
 {
 	auto instance = SRanipalEye_Core::Instance();
-    ViveSR::anipal::Eye::VerboseData vd;
-    instance->GetVerboseData(vd);
+	ViveSR::anipal::Eye::VerboseData vd;
+	instance->GetVerboseData(vd);
 	instance->GetGazeRay(GazeIndex::COMBINE, gaze.origin, gaze.direction);
 	FRotator HMD_orient;
 	FVector HMD_pos;

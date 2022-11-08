@@ -14,16 +14,25 @@ class VREXPERIMENTSBASE_API AInteractableActor : public AActor
 	GENERATED_BODY()
 	
 public:
+	AInteractableActor();
 	virtual void BeginPlay() override;
+	virtual void Tick(float DeltaTime) override;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadonly)
+	class UBoxComponent* BoundingBox;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	bool bSendLogsToSciVi = true;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	bool bIsDraggable = false;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	bool bIsVisualizableInSciVi = true;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	ATriggerBox* DragAndDropDestination = nullptr;
 
+	virtual void OnExperimentStarted();
+	virtual void OnExperimentFinished();
 	//trigger interaction
 	virtual void OnPressedByTrigger(const FHitResult& hitResult);
 	virtual void OnReleasedByTrigger(const FHitResult& hitResult);
@@ -43,6 +52,11 @@ public:
 	virtual void OnDrop();
 
 protected:
+	UFUNCTION(BlueprintImplementableEvent, meta = (DisplayName = "OnExperimentStarted"))
+	void OnExperimentStarted_BP();
+	UFUNCTION(BlueprintImplementableEvent, meta = (DisplayName = "OnExperimentFinished"))
+	void OnExperimentFinished_BP();
+
 	UFUNCTION(BlueprintImplementableEvent, meta = (DisplayName = "HadEyeFocus"))
 	void BeginOverlapByEyeTrack_BP(const FGaze& gaze, const FHitResult& hitResult);
 	UFUNCTION(BlueprintImplementableEvent, meta = (DisplayName = "EyeTrackTick"))
@@ -79,6 +93,10 @@ protected:
 	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
 #endif
 
-	FTransform TransformBeforeDrag;
+	FTransform OldTransform;
+	bool bIsDragged = false;
 	bool bActorInDragAndDropDestination = false;
+
+	void GetBBox2D(FVector2D& left_top, FVector2D& left_bottom, FVector2D& right_top, FVector2D& right_bottom);
+
 };
