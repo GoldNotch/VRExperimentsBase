@@ -276,6 +276,7 @@ void ABaseInformant::SetupPlayerInputComponent(UInputComponent* PlayerInputCompo
 	InputComponent->BindAction("RController_Grip", IE_Released, this, &ABaseInformant::DropActor_RHand);
 	InputComponent->BindAction("LController_Grip", IE_Pressed, this, &ABaseInformant::DragActor_LHand);
 	InputComponent->BindAction("LController_Grip", IE_Released, this, &ABaseInformant::DropActor_LHand);
+	InputComponent->BindAction("Quit", IE_Pressed, this, &ABaseInformant::QuitGame);
 	if (bUseMouseControlling) {
 		InputComponent->BindAxis("CameraMove_RightLeft", this, &ABaseInformant::CameraMove_LeftRight);
 		InputComponent->BindAxis("CameraMove_UpDown", this, &ABaseInformant::CameraMove_UpDown);
@@ -537,4 +538,9 @@ void ABaseInformant::Vibrate(float scale)
 		if (!MC_Right->bHiddenInGame)
 			GetController<APlayerController>()->PlayHapticEffect(VibrationEffect, EControllerHand::Right, scale);
 	}
+}
+
+void ABaseInformant::QuitGame()
+{
+	GIsRequestingExit = true;
 }
