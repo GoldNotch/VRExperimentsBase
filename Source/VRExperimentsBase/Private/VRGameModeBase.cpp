@@ -37,7 +37,7 @@ void AVRGameModeBase::Tick(float DeltaTime)
             else if (jsonParsed->TryGetField(TEXT("setExperimentStep")))
             {
                 auto step_name = jsonParsed->GetStringField(TEXT("setExperimentStep"));
-                if (experiment_step_classes.Contains(step_name))
+                if (experiment_step_classes.Contains(step_name) && IsValid(experiment_step_classes[step_name]))
                 {
                     if (IsValid(current_experiment_step))
                     {
@@ -50,7 +50,7 @@ void AVRGameModeBase::Tick(float DeltaTime)
                     params.Name = FName(FString::Printf(TEXT("ExperimentStep_%s"), *step_name));
                     current_experiment_step = GetWorld()->SpawnActor<AExperimentStepBase>(step_class, params);//it calls begin play event and starts step
                 }
-                else UE_LOG(LogGameMode, Warning, TEXT("New phase with unknown name"));
+                else UE_LOG(LogGameMode, Warning, TEXT("New phase with unknown name - %s"), *step_name);
             }
             else
                 OnSciViMessageReceived(jsonParsed);
