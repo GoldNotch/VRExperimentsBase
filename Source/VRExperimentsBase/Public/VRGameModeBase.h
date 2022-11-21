@@ -36,8 +36,6 @@ public:
 	class ABaseInformant* informant;
 	UPROPERTY(EditAnywhere, BlueprintReadwrite)
 	TMap<FString, TSubclassOf<AExperimentStepBase>> experiment_step_classes;
-	UPROPERTY(EditAnywhere, BlueprintReadonly)
-	TEnumAsByte<ECollisionChannel> EyeTrackingChannel = ECollisionChannel::ECC_GameTraceChannel1;
 
 	virtual void NotifyInformantSpawned(class ABaseInformant* _informant);
 	UFUNCTION(BlueprintCallable)

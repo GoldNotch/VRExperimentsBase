@@ -78,18 +78,18 @@ bool AVRGameModeBase::RayTrace(const AActor* ignoreActor, const FVector& origin,
     const float ray_thickness = 1.0f;
     FCollisionQueryParams traceParam = FCollisionQueryParams(FName("traceParam"), true, ignoreActor);
     traceParam.bReturnPhysicalMaterial = false;
-
+    const auto InformantTraceChannel = ECollisionChannel::ECC_Visibility;
     if (ray_thickness <= 0.0f)
     {
         return GetWorld()->LineTraceSingleByChannel(hitResult, origin, end,
-            EyeTrackingChannel, traceParam);
+            InformantTraceChannel, traceParam);
     }
     else
     {
         FCollisionShape sph = FCollisionShape();
         sph.SetSphere(ray_thickness);
         return GetWorld()->SweepSingleByChannel(hitResult, origin, end, FQuat(0.0f, 0.0f, 0.0f, 0.0f),
-            EyeTrackingChannel, sph, traceParam);
+            InformantTraceChannel, sph, traceParam);
     }
 }
 
