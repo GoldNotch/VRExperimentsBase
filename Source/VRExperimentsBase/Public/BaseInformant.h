@@ -147,6 +147,6 @@ protected:
 	class AInteractableActor* DraggedActor_LHand = nullptr;
 	class AInteractableActor* DraggedActor_RHand = nullptr;
 	
-	private:
-		void QuitGame();
+private:
+	void QuitGame();
 };

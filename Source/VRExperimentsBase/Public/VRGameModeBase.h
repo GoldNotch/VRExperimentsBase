@@ -2,22 +2,42 @@
 
 #pragma once
 
-#define DEPRECATED
-#define UI UI_ST
-THIRD_PARTY_INCLUDES_START
-#define ASIO_STANDALONE 1
-#include "ws/server_ws.hpp"
-THIRD_PARTY_INCLUDES_END
-#undef UI
-#undef ERROR
-#undef UpdateResource
-
 #include "CoreMinimal.h"
 #include "GameFramework/GameModeBase.h"
 #include "SRanipal_Eyes_Enums.h"
 #include "ExperimentStepBase.h"
-#include "BlueprintJsonLibrary.h"
 #include "VRGameModeBase.generated.h"
+
+UENUM()
+enum ExperimentLogType
+{
+	EyeTrack = 0     UMETA(DisplayName = "EyeTrack"),
+	Events      UMETA(DisplayName = "Events"),
+	Total
+};
+
+USTRUCT(BlueprintType)
+struct FExperimentLog
+{
+	GENERATED_BODY()
+public:
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	FString filename;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	TArray<FString> header;
+
+	void AppendRow(const FString& row);
+
+	void Flush();
+
+	void SetPath(const FString& new_path) { path = new_path; }
+
+private:
+	static const size_t RowsBufferCount = 1024;
+	FString rows;
+	size_t rows_to_write_count = 0;
+	FString path;
+};
 
 /**
  * 
@@ -35,56 +55,73 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadonly, DisplayName = "Informant")
 	class ABaseInformant* informant;
 	UPROPERTY(EditAnywhere, BlueprintReadwrite)
-	TMap<FString, TSubclassOf<AExperimentStepBase>> experiment_step_classes;
+	TArray<TSubclassOf<AExperimentStepBase>> ExperimentSteps;
 
 	virtual void NotifyInformantSpawned(class ABaseInformant* _informant);
 	UFUNCTION(BlueprintCallable)
 	bool RayTrace(const AActor* ignoreActor, const FVector& origin, const FVector& end, FHitResult& hitResult);
 	
-	UFUNCTION(BlueprintCallable, Category = "SciVi")
-	void StartExperiment();
-	UFUNCTION(BlueprintCallable, Category = "SciVi")
-	FORCEINLINE bool IsExperimentStarted() { return bExperimentStarted; }
-	UFUNCTION(BlueprintCallable, Category = "SciVi")
+	UFUNCTION(BlueprintCallable, Category = "Experiment")
+	void StartExperiment(bool recording = true, FString InformantName = TEXT(""));
+	UFUNCTION(BlueprintCallable, Category = "Experiment")
+	FORCEINLINE bool IsExperimentStarted() { return bExperimentRunning; }
+	UFUNCTION(BlueprintCallable, Category = "Experiment")
 	void FinishExperiment(int code, const FString& message);
+	UFUNCTION()// Use only from other threads
+	void StartExperimentByRemote(bool recording = true) 
+	{
+		bRecordLogs = recording;
+		bExperimentStarting = true;
+	}
+	UFUNCTION()// Use only from other threads
+	void FinishExperimentByRemote() { bExperimentFinishing = true; }
+	UFUNCTION(BlueprintCallable, Category = "Experiment")
+	void NextExperimentStep();
+	UFUNCTION(BlueprintCallable, Category = "Experiment")
+	void PrevExperimentStep();
+	UFUNCTION(BlueprintCallable, Category = "Experiment")
+	FORCEINLINE bool HasExperimentSteps() { return ExperimentSteps.Num() > 0; }
+
+	// events
 	virtual void OnExperimentStarted();
 	virtual void OnExperimentFinished(int code, const FString& message);
-	UFUNCTION(BlueprintImplementableEvent, Category = "SciVi", DisplayName = "OnExperimentStarted")
+	UFUNCTION(BlueprintImplementableEvent, Category = "Experiment", DisplayName = "OnExperimentStarted")
 	void OnExperimentStarted_BP();
-	UFUNCTION(BlueprintImplementableEvent, Category = "SciVi", DisplayName = "OnExperimentFinished")
+	UFUNCTION(BlueprintImplementableEvent, Category = "Experiment", DisplayName = "OnExperimentFinished")
 	void OnExperimentFinished_BP(int code, const FString& message);
-	UFUNCTION(BlueprintImplementableEvent, Category = "SciVi")
-	void OnSciViConnected();
-	UFUNCTION(BlueprintImplementableEvent, Category = "SciVi")
-	void OnSciViDisconnected();
-
 
 protected:
-	UPROPERTY()
-	AExperimentStepBase* current_experiment_step = nullptr;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+	AExperimentStepBase* CurrentExperimentStep = nullptr;
+	int32 CurrentExpeirmentStepIndex = -1;
 
+	bool bRecordLogs = false;
+	FThreadSafeBool bExperimentRunning = false;
+	FThreadSafeBool bExperimentStarting = false;
+	FThreadSafeBool bExperimentFinishing = false;
+	TSharedPtr<class SWindow> ControlPanel;
+	UPROPERTY(EditAnywhere, BlueprintReadonly)
+	TSubclassOf<class UUserWidget> ControlPanelWidgetClass;
+	UPROPERTY(EditAnywhere, BlueprintReadonly)
+	FVector2D ControlPanelSize = FVector2D(200, 200);
+	UPROPERTY()
+	class UUserWidget* ControlPanelWidget = nullptr;
 	//------------------- VR ----------------------
 public:
 	UFUNCTION(BlueprintCallable)
 	void CalibrateVR();
 
 	UPROPERTY(EditAnywhere)
-	SupportedEyeVersion EyeVersion;
-
-	// ----------------------- SciVi networking--------------
+	SupportedEyeVersion EyeVersion = SupportedEyeVersion::version1;
+	//----------------- Experiment Logging -------------
 public:
-	UFUNCTION(BlueprintCallable, DisplayName = "SendToSciVi")
-	void SendToSciVi(const FString& message);
-	UFUNCTION(BlueprintImplementableEvent, DisplayName = "OnSciViMessageReceived")
-	void OnSciViMessageReceived_BP(const FBlueprintJsonObject& msgJson);
+	UPROPERTY(EditAnywhere, BlueprintReadonly)
+	FString ExperimentLogsFolderPath = TEXT("ExperimentLogs");
+	UFUNCTION(BlueprintCallable)
+	void WriteToExperimentLog(ExperimentLogType log_type, const FString& row);
 protected:
-	virtual void OnSciViMessageReceived(TSharedPtr<FJsonObject> msgJson);
-	using WSServer = SimpleWeb::SocketServer<SimpleWeb::WS>;
-	void initWS();
-	void wsRun() { m_server.start(); }
-	WSServer m_server;
-	TUniquePtr<std::thread> m_serverThread = nullptr;//you can't use std::thread in UE4, because ue4 can't destroy it then game is exiting
-	TQueue<FString> message_queue;
-	FThreadSafeBool bExperimentStarted = false;
+	UPROPERTY(EditAnywhere, BlueprintReadonly)
+	TArray<FExperimentLog> logs;
+	TCHAR LogColumnSeparator = TEXT(';');
 	
 };

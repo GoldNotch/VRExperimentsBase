@@ -2,7 +2,7 @@
 
 
 #include "BaseInformant.h"
-#include "VRGameModeBase.h"
+#include "VRGameModeWithSciViBase.h"
 #include "InteractableActor.h"
 #include "Components/WidgetInteractionComponent.h"
 #include "Components/ArrowComponent.h"
@@ -109,19 +109,23 @@ void ABaseInformant::BeginPlay()
 
 	RecorderComponent->OnRecorded = [this](const int16* AudioData, int NumChannels, int NumSamples, int SampleRate)
 	{
-		auto GM = GetWorld()->GetAuthGameMode<AVRGameModeBase>();
-		/*TArray64<uint8_t> arr((uint8_t*)AudioData, NumSamples * sizeof(int16));
-		FFileHelper::SaveArrayToFile(arr, TEXT("aud.wav"));*/
-		auto b64pcm = FBase64::Encode((uint8_t*)AudioData, NumSamples * sizeof(int16));
-		auto json = FString::Printf(TEXT("\"WAV\": {\"SampleRate\": %i,"
-			"\"PCM\": \"data:audio/wav;base64,%s\"}"), SampleRate, *b64pcm);
-		GM->SendToSciVi(json);
+		if (auto GM = GetWorld()->GetAuthGameMode<AVRGameModeWithSciViBase>())
+		{
+			/*TArray64<uint8_t> arr((uint8_t*)AudioData, NumSamples * sizeof(int16));
+			FFileHelper::SaveArrayToFile(arr, TEXT("aud.wav"));*/
+			auto b64pcm = FBase64::Encode((uint8_t*)AudioData, NumSamples * sizeof(int16));
+			auto json = FString::Printf(TEXT("\"WAV\": {\"SampleRate\": %i,"
+				"\"PCM\": \"data:audio/wav;base64,%s\"}"), SampleRate, *b64pcm);
+			GM->SendToSciVi(json);
+		}
 	};
 	RecorderComponent->OnRecordFinished = [this]()
 	{
-		auto GM = GetWorld()->GetAuthGameMode<AVRGameModeBase>();
-		auto json = FString::Printf(TEXT("\"WAV\": \"End\""));
-		GM->SendToSciVi(json);
+		if (auto GM = GetWorld()->GetAuthGameMode<AVRGameModeWithSciViBase>())
+		{
+			auto json = FString::Printf(TEXT("\"WAV\": \"End\""));
+			GM->SendToSciVi(json);
+		}
 	};
 	AudioCapture->Activate();
 	FloorHeight = GetActorLocation().Z - (RootComponent->CalcLocalBounds().BoxExtent.Z);
@@ -542,5 +546,5 @@ void ABaseInformant::Vibrate(float scale)
 
 void ABaseInformant::QuitGame()
 {
-	GIsRequestingExit = true;
+	RequestEngineExit(TEXT("Just quit"));
 }

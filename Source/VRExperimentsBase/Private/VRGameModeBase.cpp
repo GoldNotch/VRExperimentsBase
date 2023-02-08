@@ -7,181 +7,231 @@
 #include "SRanipal_API_Eye.h"
 #include "InteractableActor.h"
 #include "EngineUtils.h"
+#include "Widgets/SWindow.h"
+#include "Blueprint/UserWidget.h"
+#include "Components/CanvasPanelSlot.h"
 #include "Kismet/GameplayStatics.h"//for PredictProjectilePath
 
 AVRGameModeBase::AVRGameModeBase(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer)
 {
-    PrimaryActorTick.bStartWithTickEnabled = true;
-    PrimaryActorTick.bCanEverTick = true;
+	PrimaryActorTick.bStartWithTickEnabled = true;
+	PrimaryActorTick.bCanEverTick = true;
+
+	logs.AddDefaulted(ExperimentLogType::Total);
+	logs[EyeTrack].filename = TEXT("eyetrack");
+	logs[EyeTrack].header = {
+							TEXT("timestamp"),
+							TEXT("Origin_x"),TEXT("Origin_y"), TEXT("Origin_z"),
+							TEXT("Direction_x"),TEXT("Direction_y"), TEXT("Direction_z"),
+							TEXT("lpdmm"),TEXT("rpdmm"),
+							TEXT("AOI"), TEXT("AOI_Component")
+	};
+	logs[Events].filename = TEXT("events");
+	logs[Events].header = {
+							TEXT("timestamp"), TEXT("Action"),
+							TEXT("AOI"), TEXT("AOI_loc_x"), TEXT("AOI_loc_y"), TEXT("AOI_loc_z")
+	};
 }
 
 void AVRGameModeBase::BeginPlay()
 {
-    Super::BeginPlay();
-    auto instance = SRanipalEye_Framework::Instance();
-    if (instance)
-        instance->StartFramework(EyeVersion);
+	Super::BeginPlay();
+	if (IsValid(ControlPanelWidgetClass))
+	{
+		ControlPanel = SNew(SWindow)
+			.Title(FText::FromString(TEXT("Control panel")))
+			.SizingRule(ESizingRule::UserSized)
+			.ClientSize(FVector2D(200, 200))
+			.SupportsMinimize(false)
+			.SupportsMaximize(false)
+			.HasCloseButton(false)
+			.CreateTitleBar(true)
+			.ScreenPosition(FVector2D(0, 0))
+			.AutoCenter(EAutoCenter::None);
+		ControlPanelWidget = UUserWidget::CreateWidgetInstance(*GetGameInstance(), ControlPanelWidgetClass, FName(TEXT("ControlPanel")));
+		ControlPanel->SetContent(ControlPanelWidget->TakeWidget());
+		ControlPanel->Resize(ControlPanelSize);
+		FSlateApplication& SlateApp = FSlateApplication::Get();
+		SlateApp.AddWindow(ControlPanel.ToSharedRef(), true);
+	}
+	//SlateWin.SetContent(SNew(SControlWidget));
+	auto instance = SRanipalEye_Framework::Instance();
+	if (instance)
+		instance->StartFramework(EyeVersion);
 }
 
 void AVRGameModeBase::Tick(float DeltaTime)
 {
-    Super::Tick(DeltaTime);
-    FString json_text;
-    if (message_queue.Dequeue(json_text))
-    {
-        TSharedPtr<FJsonObject> jsonParsed;
-        TSharedRef<TJsonReader<TCHAR>> jsonReader = TJsonReaderFactory<TCHAR>::Create(json_text);
-        if (FJsonSerializer::Deserialize(jsonReader, jsonParsed))
-        {
-            if (jsonParsed->TryGetField("calibrate")) CalibrateVR();
-            else if (jsonParsed->TryGetField(TEXT("setExperimentStep")))
-            {
-                auto step_name = jsonParsed->GetStringField(TEXT("setExperimentStep"));
-                if (experiment_step_classes.Contains(step_name) && IsValid(experiment_step_classes[step_name]))
-                {
-                    if (IsValid(current_experiment_step))
-                    {
-                        GetWorld()->RemoveActor(current_experiment_step, true);
-                        current_experiment_step->Destroy();//it calls end play and quit step
-                    }
-                    auto& step_class = experiment_step_classes[step_name];
-                    FActorSpawnParameters params;
-                    params.NameMode = FActorSpawnParameters::ESpawnActorNameMode::Requested;
-                    params.Name = FName(FString::Printf(TEXT("ExperimentStep_%s"), *step_name));
-                    current_experiment_step = GetWorld()->SpawnActor<AExperimentStepBase>(step_class, params);//it calls begin play event and starts step
-                }
-                else UE_LOG(LogGameMode, Warning, TEXT("New phase with unknown name - %s"), *step_name);
-            }
-            else
-                OnSciViMessageReceived(jsonParsed);
-        }
-    }
+	Super::Tick(DeltaTime);
+	if (IsExperimentStarted() && bExperimentFinishing)
+		FinishExperiment(0, TEXT("Experiment finished by remote host"));
+	if (!IsExperimentStarted() && bExperimentStarting)
+		StartExperiment(bRecordLogs);
 }
 
 void AVRGameModeBase::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
-    Super::EndPlay(EndPlayReason);
-    m_server.stop();
-    m_serverThread->join();
-    m_serverThread.Reset();
-    SRanipalEye_Framework::Instance()->StopFramework();
+	Super::EndPlay(EndPlayReason);
+	SRanipalEye_Framework::Instance()->StopFramework();
+	ControlPanel->RequestDestroyWindow();
 }
 
 void AVRGameModeBase::NotifyInformantSpawned(ABaseInformant* _informant)
 {
-    informant = _informant;
-    initWS();
+	informant = _informant;
 }
 
 bool AVRGameModeBase::RayTrace(const AActor* ignoreActor, const FVector& origin, const FVector& end, FHitResult& hitResult)
 {
-    const float ray_thickness = 1.0f;
-    FCollisionQueryParams traceParam = FCollisionQueryParams(FName("traceParam"), true, ignoreActor);
-    traceParam.bReturnPhysicalMaterial = false;
-    const auto InformantTraceChannel = ECollisionChannel::ECC_Visibility;
-    if (ray_thickness <= 0.0f)
-    {
-        return GetWorld()->LineTraceSingleByChannel(hitResult, origin, end,
-            InformantTraceChannel, traceParam);
-    }
-    else
-    {
-        FCollisionShape sph = FCollisionShape();
-        sph.SetSphere(ray_thickness);
-        return GetWorld()->SweepSingleByChannel(hitResult, origin, end, FQuat(0.0f, 0.0f, 0.0f, 0.0f),
-            InformantTraceChannel, sph, traceParam);
-    }
+	const float ray_thickness = 1.0f;
+	FCollisionQueryParams traceParam = FCollisionQueryParams(FName("traceParam"), true, ignoreActor);
+	traceParam.bReturnPhysicalMaterial = false;
+	const auto InformantTraceChannel = ECollisionChannel::ECC_Visibility;
+	if (ray_thickness <= 0.0f)
+	{
+		return GetWorld()->LineTraceSingleByChannel(hitResult, origin, end,
+			InformantTraceChannel, traceParam);
+	}
+	else
+	{
+		FCollisionShape sph = FCollisionShape();
+		sph.SetSphere(ray_thickness);
+		return GetWorld()->SweepSingleByChannel(hitResult, origin, end, FQuat(0.0f, 0.0f, 0.0f, 0.0f),
+			InformantTraceChannel, sph, traceParam);
+	}
 }
 
-void AVRGameModeBase::StartExperiment()
+void AVRGameModeBase::StartExperiment(bool recording/* = true*/, FString InformantName/* = FString()*/)
 {
-    bExperimentStarted = true;
-    OnExperimentStarted();
-    for (TActorIterator<AInteractableActor> It(GetWorld(), AInteractableActor::StaticClass()); It; ++It)
-        It->OnExperimentStarted();
-    for (TActorIterator<ABaseInformant> It(GetWorld(), ABaseInformant::StaticClass()); It; ++It)
-        It->OnExperimentStarted();
+	bExperimentStarting = false;
+	bExperimentRunning = true;
+	if (HasExperimentSteps())
+		NextExperimentStep();
+	if (InformantName.IsEmpty()) 
+	{
+		InformantName = TEXT("Informant_");
+		InformantName += FGuid::NewGuid().ToString();
+	}
+	// generate record files
+	bRecordLogs = recording;
+	if (bRecordLogs)
+	{
+		FString now = FDateTime::Now().ToString();
+		FString full_dir_path = FPaths::ProjectDir() + TEXT("/") + ExperimentLogsFolderPath;
+		IPlatformFile& FileManager = FPlatformFileManager::Get().GetPlatformFile();
+		if (!FileManager.DirectoryExists(*full_dir_path))
+			if (!FileManager.CreateDirectory(*full_dir_path))
+				UE_LOG(LogLoad, Error, TEXT("Directory wasn't created"));
+		for (size_t i = 0; i < ExperimentLogType::Total; ++i)
+		{
+			logs[i].SetPath(FString::Printf(TEXT("%s/%s_%s_%s.csv"), *full_dir_path, *now, *logs[i].filename, *InformantName));
+			// format header
+			FString header_row = TEXT("");
+			for (size_t j = 0, c = logs[i].header.Num(); j < c; ++j)
+			{
+				header_row += logs[i].header[j];
+				if (j < c - 1) header_row += LogColumnSeparator;
+			}
+			header_row += TEXT("\n");
+			logs[i].AppendRow(header_row);
+		}
+	}
+
+	OnExperimentStarted();
+	for (TActorIterator<AInteractableActor> It(GetWorld(), AInteractableActor::StaticClass()); It; ++It)
+		It->OnExperimentStarted();
+	for (TActorIterator<ABaseInformant> It(GetWorld(), ABaseInformant::StaticClass()); It; ++It)
+		It->OnExperimentStarted();
 }
 
 void AVRGameModeBase::FinishExperiment(int code, const FString& message)
 {
-    bExperimentStarted = false;
-    OnExperimentFinished(code, message);
-    for (TActorIterator<AInteractableActor> It(GetWorld(), AInteractableActor::StaticClass()); It; ++It)
-        It->OnExperimentFinished();
-    for (TActorIterator<ABaseInformant> It(GetWorld(), ABaseInformant::StaticClass()); It; ++It)
-        It->OnExperimentFinished();
+	bExperimentFinishing = false;
+	bExperimentRunning = false;
+	CurrentExpeirmentStepIndex = -1;
+	bRecordLogs = false;
+	for (auto&& log : logs)
+		log.Flush();
+	OnExperimentFinished(code, message);
+	for (TActorIterator<AInteractableActor> It(GetWorld(), AInteractableActor::StaticClass()); It; ++It)
+		It->OnExperimentFinished();
+	for (TActorIterator<ABaseInformant> It(GetWorld(), ABaseInformant::StaticClass()); It; ++It)
+		It->OnExperimentFinished();
+}
+
+void AVRGameModeBase::NextExperimentStep()
+{
+	if (CurrentExpeirmentStepIndex >= ExperimentSteps.Num() - 1)
+		FinishExperiment(0, TEXT("Experiment is over due to all steps are passed"));
+	else
+	{
+		if (IsValid(CurrentExperimentStep)) {
+			GetWorld()->RemoveActor(CurrentExperimentStep, true);
+			CurrentExperimentStep->Destroy();//it calls end play and quit step
+		}
+		CurrentExpeirmentStepIndex++;
+		auto& step_class = ExperimentSteps[CurrentExpeirmentStepIndex];
+		FActorSpawnParameters params;
+		params.NameMode = FActorSpawnParameters::ESpawnActorNameMode::Requested;
+		params.Name = FName(FString::Printf(TEXT("ExperimentStep_%i"), CurrentExpeirmentStepIndex));
+		CurrentExperimentStep = GetWorld()->SpawnActor<AExperimentStepBase>(step_class, params);//it calls begin play event and starts step
+	}
+}
+
+void AVRGameModeBase::PrevExperimentStep()
+{
+	if (CurrentExpeirmentStepIndex > 0)
+	{
+		if (IsValid(CurrentExperimentStep)) {
+			GetWorld()->RemoveActor(CurrentExperimentStep, true);
+			CurrentExperimentStep->Destroy();//it calls end play and quit step
+		}
+		CurrentExpeirmentStepIndex--;
+		auto& step_class = ExperimentSteps[CurrentExpeirmentStepIndex];
+		FActorSpawnParameters params;
+		params.NameMode = FActorSpawnParameters::ESpawnActorNameMode::Requested;
+		params.Name = FName(FString::Printf(TEXT("ExperimentStep_%i"), CurrentExpeirmentStepIndex));
+		CurrentExperimentStep = GetWorld()->SpawnActor<AExperimentStepBase>(step_class, params);//it calls begin play event and starts step
+	}
 }
 
 void AVRGameModeBase::OnExperimentStarted()
 {
-    OnExperimentStarted_BP();
+	OnExperimentStarted_BP();
 }
 
 void AVRGameModeBase::OnExperimentFinished(int code, const FString& message)
 {
-    OnExperimentFinished_BP(code, message);
+	OnExperimentFinished_BP(code, message);
 }
 
 // ---------------------- VR ------------------------
 
 void AVRGameModeBase::CalibrateVR()
 {
-    ViveSR::anipal::Eye::LaunchEyeCalibration(nullptr);
-    UE_LOG(LogTemp, Display, TEXT("start calibration"));
+	ViveSR::anipal::Eye::LaunchEyeCalibration(nullptr);
+	UE_LOG(LogTemp, Display, TEXT("start calibration"));
 }
 
-//---------------------- SciVi communication ------------------
-
-void AVRGameModeBase::initWS()
+void AVRGameModeBase::WriteToExperimentLog(ExperimentLogType log_type, const FString& row)
 {
-    m_server.config.port = 81;
-
-    auto& ep = m_server.endpoint["^/ue4/?$"];
-
-    ep.on_message = [this](std::shared_ptr<WSServer::Connection> connection, std::shared_ptr<WSServer::InMessage> msg)
-    {
-        auto str = FString(UTF8_TO_TCHAR(msg->string().c_str()));
-        message_queue.Enqueue(str);
-    };
-
-    ep.on_open = [this](std::shared_ptr<WSServer::Connection> connection)
-    {
-        UE_LOG(LogTemp, Display, TEXT("WebSocket: Opened"));
-        OnSciViConnected();
-    };
-
-    ep.on_close = [this](std::shared_ptr<WSServer::Connection> connection, int status, const std::string&)
-    {
-        UE_LOG(LogTemp, Display, TEXT("WebSocket: Closed"));
-        OnSciViDisconnected();
-    };
-
-    ep.on_handshake = [](std::shared_ptr<WSServer::Connection>, SimpleWeb::CaseInsensitiveMultimap&)
-    {
-        return SimpleWeb::StatusCode::information_switching_protocols;
-    };
-
-    ep.on_error = [](std::shared_ptr<WSServer::Connection> connection, const SimpleWeb::error_code& ec)
-    {
-        UE_LOG(LogTemp, Warning, TEXT("WebSocket: Error"));
-    };
-
-    m_serverThread = MakeUnique<std::thread>(&AVRGameModeBase::wsRun, this);
+	if (bExperimentRunning && bRecordLogs)
+	{
+		logs[log_type].AppendRow(row);
+	}
 }
 
-void AVRGameModeBase::SendToSciVi(const FString& message)
+void FExperimentLog::AppendRow(const FString& row)
 {
-    auto t = FDateTime::Now();
-    int64 time = t.ToUnixTimestamp() * 1000 + t.GetMillisecond();
-    auto msg = FString::Printf(TEXT("{\"Time\": %llu, %s}"), time, *message);
-    for (auto& connection : m_server.get_connections())//broadcast to everyone
-        connection->send(TCHAR_TO_UTF8(*msg));
+	rows.Append(row);
+	rows_to_write_count++;
+	if (rows_to_write_count == RowsBufferCount)
+		Flush();
 }
 
-void AVRGameModeBase::OnSciViMessageReceived(TSharedPtr<FJsonObject> msgJson)
+void FExperimentLog::Flush()
 {
-    FBlueprintJsonObject blueprint_json;
-    blueprint_json.Object = msgJson;
-    OnSciViMessageReceived_BP(blueprint_json);
+	FFileHelper::SaveStringToFile(rows, *path, FFileHelper::EEncodingOptions::ForceUTF8, & IFileManager::Get(), FILEWRITE_Append);
+	rows_to_write_count = 0;
+	rows.Reset();
 }

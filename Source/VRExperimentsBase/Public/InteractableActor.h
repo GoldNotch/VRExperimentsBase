@@ -22,7 +22,7 @@ public:
 	class UBoxComponent* BoundingBox;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	bool bSendLogsToSciVi = true;
+	bool bRecordLogs = true;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	bool bIsDraggable = false;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
@@ -97,6 +97,14 @@ protected:
 	bool bIsDragged = false;
 	bool bActorInDragAndDropDestination = false;
 
-	void GetBBox2D(FVector2D& left_top, FVector2D& left_bottom, FVector2D& right_top, FVector2D& right_bottom);
-
+	UFUNCTION(BlueprintCallable)
+	void WriteActionEverywhere(const FString& action);
+private:
+	inline FString GazeToJSON(const FGaze& gaze, const FHitResult& hitResult) const;
+	inline FString GazeToCSV(const FGaze& gaze, const FHitResult& hitResult) const;
+	inline FString ActionToJSON(const FString& Action) const;
+	inline FString ActionToCSV(const FString& Action) const;
+	inline void GetBBox2D(FVector2D& left_top, FVector2D& left_bottom, FVector2D& right_top, FVector2D& right_bottom) const;
+	inline void WriteGazeEverywhere(const FGaze& gaze, const FHitResult& hitResult);
+	inline void SendBBoxToSciVi() const;
 };
