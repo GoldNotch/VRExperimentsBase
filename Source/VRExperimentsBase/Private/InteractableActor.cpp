@@ -6,7 +6,7 @@
 #include "Components/BoxComponent.h"
 #include "UI_Blank.h"
 
-AInteractableActor::AInteractableActor()
+AInteractableActor::AInteractableActor(const FObjectInitializer& ObjectInitializer)
 {
 	RootComponent = CreateDefaultSubobject<USceneComponent>(TEXT("Root"));
 	BoundingBox = CreateDefaultSubobject<UBoxComponent>(TEXT("BBox"));

@@ -14,7 +14,7 @@ class VREXPERIMENTSBASE_API AInteractableActor : public AActor
 	GENERATED_BODY()
 	
 public:
-	AInteractableActor();
+	AInteractableActor(const FObjectInitializer& ObjectInitializer);
 	virtual void BeginPlay() override;
 	virtual void Tick(float DeltaTime) override;
 

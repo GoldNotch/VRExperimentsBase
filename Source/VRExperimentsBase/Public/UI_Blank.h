@@ -14,7 +14,7 @@ class VREXPERIMENTSBASE_API AUI_Blank : public AInteractableActor
 	
 public:	
 	// Sets default values for this actor's properties
-	AUI_Blank();
+	AUI_Blank(const FObjectInitializer& ObjectInitializer);
 	void SetWidgetClass(TSubclassOf<UUserWidget> widget_class, const FVector2D& draw_size);
 	UUserWidget* GetWidget();
 	UFUNCTION(BlueprintCallable)
