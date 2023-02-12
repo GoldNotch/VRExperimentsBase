@@ -31,11 +31,17 @@ AVRGameModeBase::AVRGameModeBase(const FObjectInitializer& ObjectInitializer) : 
 							TEXT("timestamp"), TEXT("Action"),
 							TEXT("AOI"), TEXT("AOI_loc_x"), TEXT("AOI_loc_y"), TEXT("AOI_loc_z")
 	};
+
+	// if game window had focus - show controller
+	OnGameWindowFocus.BindLambda([this](auto, auto) { informant->EnableInputEvents(true); });
+	// if game window lost focus - hide controller
+	OnGameWindowFocusLost.BindLambda([this](auto) { informant->EnableInputEvents(false); });
 }
 
 void AVRGameModeBase::BeginPlay()
 {
 	Super::BeginPlay();
+	// Init control panel
 	if (IsValid(ControlPanelWidgetClass))
 	{
 		ControlPanel = SNew(SWindow)
@@ -52,9 +58,12 @@ void AVRGameModeBase::BeginPlay()
 		ControlPanel->SetContent(ControlPanelWidget->TakeWidget());
 		ControlPanel->Resize(ControlPanelSize);
 		FSlateApplication& SlateApp = FSlateApplication::Get();
+		GameWindow = SlateApp.GetActiveTopLevelWindow();
 		SlateApp.AddWindow(ControlPanel.ToSharedRef(), true);
+		GameWindow->SetOnMouseEnter(OnGameWindowFocus);
+		GameWindow->SetOnMouseLeave(OnGameWindowFocusLost);
 	}
-	//SlateWin.SetContent(SNew(SControlWidget));
+
 	auto instance = SRanipalEye_Framework::Instance();
 	if (instance)
 		instance->StartFramework(EyeVersion);

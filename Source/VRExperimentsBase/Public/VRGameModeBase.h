@@ -100,12 +100,16 @@ protected:
 	FThreadSafeBool bExperimentStarting = false;
 	FThreadSafeBool bExperimentFinishing = false;
 	TSharedPtr<class SWindow> ControlPanel;
+	TSharedPtr<class SWindow> GameWindow;
 	UPROPERTY(EditAnywhere, BlueprintReadonly)
 	TSubclassOf<class UUserWidget> ControlPanelWidgetClass;
 	UPROPERTY(EditAnywhere, BlueprintReadonly)
 	FVector2D ControlPanelSize = FVector2D(200, 200);
 	UPROPERTY()
 	class UUserWidget* ControlPanelWidget = nullptr;
+
+	FSimpleNoReplyPointerEventHandler OnGameWindowFocusLost;
+	FNoReplyPointerEventHandler OnGameWindowFocus;
 	//------------------- VR ----------------------
 public:
 	UFUNCTION(BlueprintCallable)

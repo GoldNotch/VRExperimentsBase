@@ -54,6 +54,17 @@ public:
 	void StopRecording();
 	bool IsRecording() const;
 
+	UFUNCTION(BlueprintCallable)
+	virtual void EnableInputEvents(bool enable);
+	UFUNCTION(BlueprintCallable)
+	FORCEINLINE bool IsInputEventsEnabled() const { return bIsInputEventsEnabled; }
+
+
+	UFUNCTION(BlueprintImplementableEvent)
+	void OnInputEnabled();
+	UFUNCTION(BlueprintImplementableEvent)
+	void OnInputDisabled();
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	bool bIsWalkingEnabled = true;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
@@ -92,6 +103,7 @@ public:
 	virtual void OnExperimentFinished();
 
 protected:
+	bool bIsInputEventsEnabled = true;
 	UPROPERTY(EditAnywhere, BlueprintReadonly)
 	class USphereComponent* InteractionCollider;
 	UFUNCTION(BlueprintImplementableEvent, meta = (DisplayName = "OnExperimentStarted"))

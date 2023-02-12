@@ -533,6 +533,17 @@ bool ABaseInformant::IsRecording() const
 	return RecorderComponent->IsRecording();
 }
 
+void ABaseInformant::EnableInputEvents(bool enable)
+{
+	if (IsInputEventsEnabled() != enable)
+	{
+		bIsInputEventsEnabled = enable;
+		if (bIsInputEventsEnabled)
+			OnInputEnabled();
+		else OnInputDisabled();
+	}
+}
+
 void ABaseInformant::Vibrate(float scale)
 {
 	if (GetWorld()->GetFirstPlayerController() == GetController())
