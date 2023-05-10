@@ -110,6 +110,12 @@ protected:
 
 	FSimpleNoReplyPointerEventHandler OnGameWindowFocusLost;
 	FNoReplyPointerEventHandler OnGameWindowFocus;
+
+	FORCEINLINE int64 GetLogTimestamp() const 
+	{
+		auto t = FDateTime::Now();
+		return t.ToUnixTimestamp() * 1000 + t.GetMillisecond();
+	}
 	//------------------- VR ----------------------
 public:
 	UFUNCTION(BlueprintCallable)

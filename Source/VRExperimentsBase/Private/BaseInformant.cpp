@@ -8,6 +8,8 @@
 #include "Components/ArrowComponent.h"
 #include "Components/SphereComponent.h"
 #include "Components/ForceFeedbackComponent.h"
+#include "MediaSoundComponent.h"
+#include "MediaPlayer.h"
 #include <AudioCaptureComponent.h>
 #include "SubmixRecorder.h"
 #include "SRanipal_API_Eye.h"
@@ -73,6 +75,11 @@ ABaseInformant::ABaseInformant()
 	InteractionCollider = CreateDefaultSubobject<USphereComponent>(TEXT("InteractionCollider"));
 	InteractionCollider->SetupAttachment(RootComponent);
 	InteractionCollider->SetSphereRadius(InteractionDistance);
+
+	UMediaPlayer* media_player = NewObject<UMediaPlayer>(this, TEXT("MediaPlayer"));
+	MediaSound = CreateDefaultSubobject<UMediaSoundComponent>(TEXT("MediaSound"));
+	MediaSound->SetupAttachment(RootComponent);
+	MediaSound->SetMediaPlayer(media_player);
 }
 
 // Called when the game starts or when spawned
@@ -86,47 +93,10 @@ void ABaseInformant::BeginPlay()
 		RecorderComponent->SubmixToRecord = dynamic_cast<USoundSubmix*>(AudioCapture->SoundSubmix);
 	}
 
-	//Create wav file for debug
-	/*struct WAVHEADER
-	{
-		int chunkId = 0x52494646;
-		int chunkSize = 0;
-		int format = 0x57415645;
-		int subchunk1Id = 0x666d7420;
-		int subchunk1Size = 16;
-		uint16 audioFormat = 1;
-		uint16 numChannels = 1;
-		int sampleRate = 48000;
-		int byteRate = 96000;
-		uint16 blockAlign = 2;
-		uint16 bitsPerSample = 16;
-		int subchunk2Id = 0x64617461;
-		int subchunk2Size = 0;
-	};
-	WAVHEADER header;
-	TArray64<uint8_t> arr((uint8_t*)&header, sizeof(header));
-	FFileHelper::SaveArrayToFile(arr, TEXT("aud.wav"));*/
-
 	RecorderComponent->OnRecorded = [this](const int16* AudioData, int NumChannels, int NumSamples, int SampleRate)
-	{
-		if (auto GM = GetWorld()->GetAuthGameMode<AVRGameModeWithSciViBase>())
-		{
-			/*TArray64<uint8_t> arr((uint8_t*)AudioData, NumSamples * sizeof(int16));
-			FFileHelper::SaveArrayToFile(arr, TEXT("aud.wav"));*/
-			auto b64pcm = FBase64::Encode((uint8_t*)AudioData, NumSamples * sizeof(int16));
-			auto json = FString::Printf(TEXT("\"WAV\": {\"SampleRate\": %i,"
-				"\"PCM\": \"data:audio/wav;base64,%s\"}"), SampleRate, *b64pcm);
-			GM->SendToSciVi(json);
-		}
-	};
-	RecorderComponent->OnRecordFinished = [this]()
-	{
-		if (auto GM = GetWorld()->GetAuthGameMode<AVRGameModeWithSciViBase>())
-		{
-			auto json = FString::Printf(TEXT("\"WAV\": \"End\""));
-			GM->SendToSciVi(json);
-		}
-	};
+	{OnRecordBatch(AudioData, NumChannels, NumSamples, SampleRate); };
+	RecorderComponent->OnRecordFinished = [this] {OnFinishRecord(); };
+
 	AudioCapture->Activate();
 	FloorHeight = GetActorLocation().Z - (RootComponent->CalcLocalBounds().BoxExtent.Z);
 
@@ -299,7 +269,7 @@ void ABaseInformant::OnExperimentFinished()
 	OnExperimentFinished_BP();
 }
 
-void ABaseInformant::OnRTriggerPressed()
+void ABaseInformant::OnRTriggerPressed_Implementation()
 {
 	if (!MC_Right->bHiddenInGame)
 	{
@@ -322,7 +292,7 @@ void ABaseInformant::OnRTriggerPressed()
 	MC_Right_Interaction_Lazer->PressPointerKey(LMB);
 }
 
-void ABaseInformant::OnRTriggerReleased()
+void ABaseInformant::OnRTriggerReleased_Implementation()
 {
 	if (!MC_Right->bHiddenInGame)
 	{
@@ -344,9 +314,9 @@ void ABaseInformant::OnRTriggerReleased()
 	MC_Right_Interaction_Lazer->ReleasePointerKey(LMB);
 }
 
-void ABaseInformant::OnLTriggerPressed() {}
+void ABaseInformant::OnLTriggerPressed_Implementation() {}
 
-void ABaseInformant::OnLTriggerReleased() {}
+void ABaseInformant::OnLTriggerReleased_Implementation() {}
 
 void ABaseInformant::CameraMove_LeftRight(float value)
 {
@@ -364,7 +334,7 @@ void ABaseInformant::CameraMove_UpDown(float value)
 	CameraComponent->SetRelativeRotation(FRotator(CameraPitch, 0.0f, 0.0f));
 }
 
-void ABaseInformant::DragActor_RHand()
+void ABaseInformant::DragActor_RHand_Implementation()
 {
 	if (!MC_Right->bHiddenInGame)
 	{
@@ -385,14 +355,14 @@ void ABaseInformant::DragActor_RHand()
 	}
 }
 
-void ABaseInformant::DropActor_RHand()
+void ABaseInformant::DropActor_RHand_Implementation()
 {
 	if (IsValid(DraggedActor_RHand))
 		DraggedActor_RHand->OnDrop();
 	DraggedActor_RHand = nullptr;
 }
 
-void ABaseInformant::DragActor_LHand()
+void ABaseInformant::DragActor_LHand_Implementation()
 {
 	if (!MC_Left->bHiddenInGame)
 	{
@@ -413,7 +383,7 @@ void ABaseInformant::DragActor_LHand()
 	}
 }
 
-void ABaseInformant::DropActor_LHand()
+void ABaseInformant::DropActor_LHand_Implementation()
 {
 	if (IsValid(DraggedActor_LHand))
 		DraggedActor_LHand->OnDrop();
@@ -531,6 +501,70 @@ void ABaseInformant::StopRecording()
 bool ABaseInformant::IsRecording() const
 {
 	return RecorderComponent->IsRecording();
+}
+
+void ABaseInformant::PlaySound(const FString& path)
+{
+	if (!MediaSound->GetMediaPlayer())
+	{
+		UE_LOG(LogAudio, Error, TEXT("MediaSound Component hasn't media player set"));
+		return;
+	}
+	if (playing_sound != path) // starts new file
+	{
+		playing_sound = path;
+		MediaSound->GetMediaPlayer()->OpenFile(playing_sound);
+		auto t = FDateTime::Now().ToUnixTimestamp() * 1000;
+		if (auto GM = GetWorld()->GetAuthGameMode<AVRGameModeBase>())
+		{
+			auto csv = FString::Printf(TEXT("%lli;PlayAudioDescription;%s\n"), t, *path);
+			GM->WriteToExperimentLog(ExperimentLogType::Events, csv);
+			if (auto GM_with_scivi = GetWorld()->GetAuthGameMode<AVRGameModeWithSciViBase>())
+			{
+				auto json = FString::Printf(TEXT("\"PlayAudioDescription\":{\"Name\": \"%s\"}"), *path);
+				GM_with_scivi->SendToSciVi(json);
+			}
+		}
+	}
+	MediaSound->GetMediaPlayer()->Play();
+}
+
+void ABaseInformant::StopSound()
+{
+	if (!MediaSound->GetMediaPlayer())
+	{
+		UE_LOG(LogAudio, Error, TEXT("MediaSound Component hasn't media player set"));
+		return;
+	}
+	MediaSound->GetMediaPlayer()->Pause();
+}
+
+void ABaseInformant::FlushSound()
+{
+	if (!MediaSound->GetMediaPlayer())
+	{
+		UE_LOG(LogAudio, Error, TEXT("MediaSound Component hasn't media player set"));
+		return;
+	}
+	StopSound();
+	auto t = FDateTime::Now().ToUnixTimestamp() * 1000;
+	if (auto GM = GetWorld()->GetAuthGameMode<AVRGameModeBase>())
+	{
+		auto csv = FString::Printf(TEXT("%lli;StopAudioDescription;%s\n"), t, *playing_sound);
+		GM->WriteToExperimentLog(ExperimentLogType::Events, csv);
+		if (auto GM_with_scivi = GetWorld()->GetAuthGameMode<AVRGameModeWithSciViBase>())
+		{
+			auto json = FString::Printf(TEXT("\"StopAudioDescription\":{\"Name\": \"%s\"}"), *playing_sound);
+			GM_with_scivi->SendToSciVi(json);
+		}
+	}
+	MediaSound->GetMediaPlayer()->Close();
+	playing_sound.Empty();
+}
+
+bool ABaseInformant::IsSoundPlaying() const
+{
+	return MediaSound->GetMediaPlayer() != nullptr && MediaSound->GetMediaPlayer()->IsPlaying();
 }
 
 void ABaseInformant::EnableInputEvents(bool enable)

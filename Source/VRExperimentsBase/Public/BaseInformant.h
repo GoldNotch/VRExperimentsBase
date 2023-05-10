@@ -17,6 +17,8 @@ struct VREXPERIMENTSBASE_API FGaze
 	UPROPERTY()
 	FVector direction;
 	UPROPERTY()
+	FVector target;
+	UPROPERTY()
 	float left_pupil_diameter_mm = 0.0f;
 	UPROPERTY()
 	float left_pupil_openness = 0.0f;
@@ -53,6 +55,19 @@ public:
 	UFUNCTION()
 	void StopRecording();
 	bool IsRecording() const;
+protected:
+	virtual void OnRecordBatch(const int16* AudioData, int NumChannels, int NumSamples, int SampleRate) {}
+	virtual void OnFinishRecord() {}
+
+public:
+	UFUNCTION(BlueprintCallable)
+	void PlaySound(const FString& path);
+	UFUNCTION(BlueprintCallable)
+	void StopSound();
+	UFUNCTION(BlueprintCallable)
+	void FlushSound();
+	UFUNCTION(BlueprintCallable)
+	bool IsSoundPlaying() const;
 
 	UFUNCTION(BlueprintCallable)
 	virtual void EnableInputEvents(bool enable);
@@ -97,12 +112,16 @@ public:
 	class USubmixRecorder* RecorderComponent;
 
 	UPROPERTY(EditAnywhere, BlueprintReadonly)
+	class UMediaSoundComponent* MediaSound;
+
+	UPROPERTY(EditAnywhere, BlueprintReadonly)
 	UHapticFeedbackEffect_Base* VibrationEffect;
 
 	virtual void OnExperimentStarted();
 	virtual void OnExperimentFinished();
 
 protected:
+	FString playing_sound;
 	bool bIsInputEventsEnabled = true;
 	UPROPERTY(EditAnywhere, BlueprintReadonly)
 	class USphereComponent* InteractionCollider;
@@ -111,28 +130,35 @@ protected:
 	UFUNCTION(BlueprintImplementableEvent, meta = (DisplayName = "OnExperimentFinished"))
 	void OnExperimentFinished_BP();
 
-	UFUNCTION()
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category="Input")
 	void OnRTriggerPressed();
-	UFUNCTION()
+	virtual void OnRTriggerPressed_Implementation();
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Input")
 	void OnRTriggerReleased();
-	UFUNCTION()
+	virtual void OnRTriggerReleased_Implementation();
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Input")
 	void OnLTriggerPressed();
-	UFUNCTION()
+	virtual void OnLTriggerPressed_Implementation();
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Input")
 	void OnLTriggerReleased();
-	UFUNCTION()
+	virtual void OnLTriggerReleased_Implementation();
 	void CameraMove_LeftRight(float value);
-	UFUNCTION()
 	void CameraMove_UpDown(float value);
-	UFUNCTION()
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Input")
 	void DragActor_RHand();
-	UFUNCTION()
+	virtual void DragActor_RHand_Implementation();
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Input")
 	void DropActor_RHand();
-	UFUNCTION()
+	virtual void DropActor_RHand_Implementation();
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Input")
 	void DragActor_LHand();
-	UFUNCTION()
+	virtual void DragActor_LHand_Implementation();
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Input")
 	void DropActor_LHand();
+	virtual void DropActor_LHand_Implementation();
 	float Yaw;
 	float CameraPitch;
+
 	//------------ Walking -----------------
 	UFUNCTION()
 	void Walking_Trajectory();

@@ -29,11 +29,11 @@ void AInteractableActor::BeginPlay()
 void AInteractableActor::Tick(float DeltaTime)
 {
 	auto& current_transform = GetActorTransform();
-	if (!current_transform.Equals(OldTransform))//actor was replaced
-	{
-		OldTransform = current_transform;
-		SendBBoxToSciVi();
-	}
+	//if (!current_transform.Equals(OldTransform))//actor was replaced
+	//{
+	//	OldTransform = current_transform;
+	//	SendBBoxToSciVi();
+	//}
 }
 
 //-------------------- Events -------------------
@@ -46,7 +46,7 @@ void AInteractableActor::BeginOverlapByEyeTrack(const FGaze& gaze, const FHitRes
 void AInteractableActor::ProcessEyeTrack(const FGaze& gaze, const FHitResult& hitResult)
 {
 	ProcessEyeTrack_BP(gaze, hitResult);
-	WriteGazeEverywhere(gaze, hitResult);
+	//WriteGazeEverywhere(gaze, hitResult);
 }
 
 void AInteractableActor::EndOverlapByEyeTrack()
@@ -56,7 +56,7 @@ void AInteractableActor::EndOverlapByEyeTrack()
 
 void AInteractableActor::OnExperimentStarted()
 {
-	SendBBoxToSciVi();
+	//SendBBoxToSciVi();
 	OnExperimentStarted_BP();
 }
 
@@ -68,14 +68,14 @@ void AInteractableActor::OnExperimentFinished()
 void AInteractableActor::OnPressedByTrigger(const FHitResult& hitResult)
 {
 	OnPressedByTrigger_BP(hitResult);
-	WriteActionEverywhere(TEXT("TriggerPressed"));
+	//WriteActionEverywhere(TEXT("TriggerPressed"));
 
 }
 
 void AInteractableActor::OnReleasedByTrigger(const FHitResult& hitResult)
 {
 	OnReleasedByTrigger_BP(hitResult);
-	WriteActionEverywhere(TEXT("TriggerReleased"));
+	//WriteActionEverywhere(TEXT("TriggerReleased"));
 }
 
 void AInteractableActor::BeginOverlapByController(const FHitResult& hitResult)
@@ -86,7 +86,7 @@ void AInteractableActor::BeginOverlapByController(const FHitResult& hitResult)
 void AInteractableActor::InFocusByController(const FHitResult& hitResult)
 {
 	InFocusByController_BP(hitResult);
-	WriteActionEverywhere(TEXT("ControllerFocused"));
+	//WriteActionEverywhere(TEXT("ControllerFocused"));
 }
 
 void AInteractableActor::EndOverlapByController()
@@ -109,7 +109,7 @@ void AInteractableActor::OnDrag()
 {
 	bIsDragged = true;
 	SetActorRotation(FRotator(0.0f, 0.0f, 0.0f));
-	WriteActionEverywhere(TEXT("InformantDragItem"));
+	//WriteActionEverywhere(TEXT("InformantDragItem"));
 	OnDrag_BP();
 }
 
@@ -118,14 +118,12 @@ void AInteractableActor::OnDrop()
 	bool IsInDestination = false;
 	if (IsValid(DragAndDropDestination) && bActorInDragAndDropDestination)
 	{
-		WriteActionEverywhere(TEXT("InformantDropItemInCorrectPlace"));
 		SetActorLocationAndRotation(DragAndDropDestination->GetActorLocation(),
 			DragAndDropDestination->GetActorRotation());
 		IsInDestination = true;
 	}
 	else
 	{
-		WriteActionEverywhere(TEXT("InformantDropItemInWrongPlace"));
 		SetActorTransform(OldTransform);
 	}
 	OnDrop_BP(IsInDestination);
@@ -176,112 +174,111 @@ void AInteractableActor::PostEditChangeProperty(FPropertyChangedEvent& PropertyC
 
 //------------------------ service funcs -----------------------
 
-void AInteractableActor::WriteActionEverywhere(const FString& action)
-{
-	if (auto GM = GetWorld()->GetAuthGameMode<AVRGameModeBase>())
-	{
-		if (GM->IsExperimentStarted() && bRecordLogs)
-		{
-			GM->WriteToExperimentLog(ExperimentLogType::Events, ActionToCSV(action));
-			//send to SciVi
-			if (auto GM_with_scivi = Cast<AVRGameModeWithSciViBase>(GM))
-				GM_with_scivi->SendToSciVi(ActionToJSON(action));
-		}
-	}
-}
+//void AInteractableActor::WriteActionEverywhere(const FString& action)
+//{
+//	if (auto GM = GetWorld()->GetAuthGameMode<AVRGameModeBase>())
+//	{
+//		if (GM->IsExperimentStarted() && bRecordLogs)
+//		{
+//			GM->WriteToExperimentLog(ExperimentLogType::Events, ActionToCSV(action));
+//			//send to SciVi
+//			if (auto GM_with_scivi = Cast<AVRGameModeWithSciViBase>(GM))
+//				GM_with_scivi->SendToSciVi(ActionToJSON(action));
+//		}
+//	}
+//}
+//
+//inline void AInteractableActor::WriteGazeEverywhere(const FGaze& gaze, const FHitResult& hitResult)
+//{
+//	if (auto GM = GetWorld()->GetAuthGameMode<AVRGameModeBase>())
+//	{
+//		if (GM->IsExperimentStarted() && bRecordLogs)
+//		{
+//			GM->WriteToExperimentLog(ExperimentLogType::EyeTrack, GazeToCSV(gaze, hitResult));
+//			if (auto GM_with_scivi = Cast<AVRGameModeWithSciViBase>(GM))
+//				GM_with_scivi->SendToSciVi(GazeToJSON(gaze, hitResult));
+//		}
+//	}
+//}
+//
+//inline void AInteractableActor::GetBBox2D(FVector2D& left_top, FVector2D& left_bottom, FVector2D& right_top, FVector2D& right_bottom) const
+//{
+//	auto& transform = BoundingBox->GetComponentTransform();
+//	FVector extent = BoundingBox->GetScaledBoxExtent();
+//	FVector lt, lb, rt, rb;
+//	lt.X = lb.X = -extent.X;
+//	lt.Y = rt.Y = extent.Y;
+//	rt.X = rb.X = extent.X;
+//	lb.Y = rb.Y = -extent.Y;
+//	lt = transform.TransformPositionNoScale(lt);
+//	lb = transform.TransformPositionNoScale(lb);
+//	rt = transform.TransformPositionNoScale(rt);
+//	rb = transform.TransformPositionNoScale(rb);
+//	left_top.X = lt.X;
+//	left_top.Y = lt.Y;
+//	left_bottom.X = lb.X;
+//	left_bottom.Y = lb.Y;
+//	right_top.X = rt.X;
+//	right_top.Y = rt.Y;
+//	right_bottom.X = rb.X;
+//	right_bottom.Y = rb.Y;
+//}
+//
+//inline void AInteractableActor::SendBBoxToSciVi() const
+//{
+//	if (bRecordLogs && bIsVisualizableInSciVi)
+//		if (auto GM_with_scivi = GetWorld()->GetAuthGameMode<AVRGameModeWithSciViBase>())
+//			if (GM_with_scivi->IsExperimentStarted())
+//			{
+//				FVector2D lt, lb, rt, rb;
+//				GetBBox2D(lt, lb, rt, rb);
+//				auto json = FString::Printf(TEXT("\"NewAOIRect\": {"
+//					"\"AOI\": \"%s\","
+//					"\"BoundingRect\": [[%f, %f], [%f, %f], [%f, %f], [%f, %f]]"
+//					"}"),
+//					*GetName(), lt.X, lt.Y, lb.X, lb.Y, rb.X, rb.Y, rt.X, rt.Y);
+//				GM_with_scivi->SendToSciVi(json);
+//			}
+//}
 
-inline void AInteractableActor::WriteGazeEverywhere(const FGaze& gaze, const FHitResult& hitResult)
-{
-	if (auto GM = GetWorld()->GetAuthGameMode<AVRGameModeBase>())
-	{
-		if (GM->IsExperimentStarted() && bRecordLogs)
-		{
-			GM->WriteToExperimentLog(ExperimentLogType::EyeTrack, GazeToCSV(gaze, hitResult));
-			if (auto GM_with_scivi = Cast<AVRGameModeWithSciViBase>(GM))
-				GM_with_scivi->SendToSciVi(GazeToJSON(gaze, hitResult));
-		}
-	}
-}
-
-inline void AInteractableActor::GetBBox2D(FVector2D& left_top, FVector2D& left_bottom, FVector2D& right_top, FVector2D& right_bottom) const
-{
-	auto& transform = BoundingBox->GetComponentTransform();
-	FVector extent = BoundingBox->GetScaledBoxExtent();
-	FVector lt, lb, rt, rb;
-	lt.X = lb.X = -extent.X;
-	lt.Y = rt.Y = extent.Y;
-	rt.X = rb.X = extent.X;
-	lb.Y = rb.Y = -extent.Y;
-	lt = transform.TransformPositionNoScale(lt);
-	lb = transform.TransformPositionNoScale(lb);
-	rt = transform.TransformPositionNoScale(rt);
-	rb = transform.TransformPositionNoScale(rb);
-	left_top.X = lt.X;
-	left_top.Y = lt.Y;
-	left_bottom.X = lb.X;
-	left_bottom.Y = lb.Y;
-	right_top.X = rt.X;
-	right_top.Y = rt.Y;
-	right_bottom.X = rb.X;
-	right_bottom.Y = rb.Y;
-}
-
-inline void AInteractableActor::SendBBoxToSciVi() const
-{
-	if (bRecordLogs && bIsVisualizableInSciVi)
-		if (auto GM_with_scivi = GetWorld()->GetAuthGameMode<AVRGameModeWithSciViBase>())
-			if (GM_with_scivi->IsExperimentStarted())
-			{
-				FVector2D lt, lb, rt, rb;
-				GetBBox2D(lt, lb, rt, rb);
-				auto json = FString::Printf(TEXT("\"NewAOIRect\": {"
-					"\"AOI\": \"%s\","
-					"\"BoundingRect\": [[%f, %f], [%f, %f], [%f, %f], [%f, %f]]"
-					"}"),
-					*GetName(), lt.X, lt.Y, lb.X, lb.Y, rb.X, rb.Y, rt.X, rt.Y);
-				GM_with_scivi->SendToSciVi(json);
-			}
-}
-
-inline FString AInteractableActor::GazeToJSON(const FGaze& gaze, const FHitResult& hitResult) const
-{
-	return FString::Printf(TEXT("\"GazeLog\": {"
-		"\"origin\": [%f, %f, %f],"
-		"\"direction\": [%f, %f, %f],"
-		"\"lpdmm\": %F, \"rpdmm\": %F,"
-		"\"AOI\": \"%s\","
-		"\"AOI_Component\": \"%s\""
-		"}"),
-		gaze.origin.X, gaze.origin.Y, gaze.origin.Z,
-		gaze.direction.X, gaze.direction.Y, gaze.direction.Z,
-		gaze.left_pupil_diameter_mm, gaze.right_pupil_diameter_mm,
-		*GetName(), *hitResult.Component->GetName());
-}
-
-inline FString AInteractableActor::GazeToCSV(const FGaze& gaze, const FHitResult& hitResult) const
-{
-	auto t = FDateTime::Now();
-	return FString::Printf(TEXT("%lli;%f;%f;%f;%f;%f;%f;%f;%f;%s;%s\n"),
-		t.ToUnixTimestamp() * 1000 + t.GetMillisecond(),
-		gaze.origin.X, gaze.origin.Y, gaze.origin.Z,
-		gaze.direction.X, gaze.direction.Y, gaze.direction.Z,
-		gaze.left_pupil_diameter_mm, gaze.right_pupil_diameter_mm,
-		*GetName(), *hitResult.Component->GetName());
-}
-
-inline FString AInteractableActor::ActionToJSON(const FString& Action) const
-{
-	const auto& loc = GetActorLocation();
-	return FString::Printf(TEXT("\"ExperimentLog\": {"
-		"\"Action\": \"%s\","
-		"\"AOI\": \"%s\","
-		"\"AOI_Location\": [%f, %f, %f]"
-		"}"), *Action, *GetName(), loc.X, loc.Y, loc.Z);
-}
-
-inline FString AInteractableActor::ActionToCSV(const FString& Action) const
-{
-	const auto& loc = GetActorLocation();
-	auto t = FDateTime::Now();
-	return FString::Printf(TEXT("%lli;%s;%s;%f;%f;%f\n"), t.ToUnixTimestamp() * 1000 + t.GetMillisecond(), *Action, *GetName(), loc.X, loc.Y, loc.Z);
-}
+//inline FString AInteractableActor::GazeToJSON(const FGaze& gaze, const FHitResult& hitResult) const
+//{
+//	return FString::Printf(TEXT("\"GazeLog\": {"
+//		"\"origin\": [%f, %f, %f],"
+//		"\"direction\": [%f, %f, %f],"
+//		"\"lpdmm\": %F, \"rpdmm\": %F,"
+//		"\"AOI\": \"%s\","
+//		"\"AOI_Component\": \"%s\""
+//		"}"),
+//		gaze.origin.X, gaze.origin.Y, gaze.origin.Z,
+//		gaze.direction.X, gaze.direction.Y, gaze.direction.Z,
+//		gaze.left_pupil_diameter_mm, gaze.right_pupil_diameter_mm,
+//		*GetName(), *hitResult.Component->GetName());
+//}
+//
+//inline FString AInteractableActor::GazeToCSV(const FGaze& gaze, const FHitResult& hitResult) const
+//{
+//	auto t = FDateTime::Now();
+//	return FString::Printf(TEXT("%f;%f;%f;%f;%f;%f;%f;%f;%s;%s\n"),
+//		gaze.origin.X, gaze.origin.Y, gaze.origin.Z,
+//		gaze.direction.X, gaze.direction.Y, gaze.direction.Z,
+//		gaze.left_pupil_diameter_mm, gaze.right_pupil_diameter_mm,
+//		*GetName(), *hitResult.Component->GetName());
+//}
+//
+//inline FString AInteractableActor::ActionToJSON(const FString& Action) const
+//{
+//	const auto& loc = GetActorLocation();
+//	return FString::Printf(TEXT("\"ExperimentLog\": {"
+//		"\"Action\": \"%s\","
+//		"\"AOI\": \"%s\","
+//		"\"AOI_Location\": [%f, %f, %f]"
+//		"}"), *Action, *GetName(), loc.X, loc.Y, loc.Z);
+//}
+//
+//inline FString AInteractableActor::ActionToCSV(const FString& Action) const
+//{
+//	const auto& loc = GetActorLocation();
+//	auto t = FDateTime::Now();
+//	return FString::Printf(TEXT("%lli;%s;%s;%f;%f;%f\n"), t.ToUnixTimestamp() * 1000 + t.GetMillisecond(), *Action, *GetName(), loc.X, loc.Y, loc.Z);
+//}

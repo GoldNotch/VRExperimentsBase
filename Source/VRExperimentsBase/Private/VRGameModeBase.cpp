@@ -128,9 +128,9 @@ void AVRGameModeBase::StartExperiment(bool recording/* = true*/, FString Informa
 	{
 		FString now = FDateTime::Now().ToString();
 		FString full_dir_path = FPaths::ProjectDir() + TEXT("/") + ExperimentLogsFolderPath;
-		IPlatformFile& FileManager = FPlatformFileManager::Get().GetPlatformFile();
-		if (!FileManager.DirectoryExists(*full_dir_path))
-			if (!FileManager.CreateDirectory(*full_dir_path))
+		auto& platformFile = FPlatformFileManager::Get().GetPlatformFile();
+		if (!platformFile.DirectoryExists(*full_dir_path))
+			if (!platformFile.CreateDirectory( * full_dir_path))
 				UE_LOG(LogLoad, Error, TEXT("Directory wasn't created"));
 		for (size_t i = 0; i < ExperimentLogType::Total; ++i)
 		{
@@ -227,7 +227,7 @@ void AVRGameModeBase::WriteToExperimentLog(ExperimentLogType log_type, const FSt
 {
 	if (bExperimentRunning && bRecordLogs)
 	{
-		logs[log_type].AppendRow(row);
+		logs[log_type].AppendRow(FString::Printf(TEXT("%lli;%s"), GetLogTimestamp(), *row));
 	}
 }
 
