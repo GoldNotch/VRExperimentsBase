@@ -18,22 +18,11 @@ void AInteractableActor::BeginPlay()
 	Super::BeginPlay();
 	bIsDraggable = bIsDraggable && IsRootComponentMovable();
 	OldTransform = GetActorTransform();
-	if (IsValid(DragAndDropDestination)) {
-		DragAndDropDestination->OnActorBeginOverlap.AddDynamic
-		(this, &AInteractableActor::OnBeginOverlapWithDragAndDropDestination);
-		DragAndDropDestination->OnActorEndOverlap.AddDynamic
-		(this, &AInteractableActor::OnEndOverlapWithDragAndDropDestination);
-	}
 }
 
 void AInteractableActor::Tick(float DeltaTime)
 {
-	auto& current_transform = GetActorTransform();
-	if (!current_transform.Equals(OldTransform))//actor was replaced
-	{
-		OldTransform = current_transform;
-		OnMove(current_transform);
-	}
+	Super::Tick(DeltaTime);
 }
 
 //-------------------- Events -------------------
@@ -107,6 +96,12 @@ void AInteractableActor::HadFarToPlayer()
 //---------------------- Drag & Drop -----------------------------
 void AInteractableActor::OnDrag()
 {
+	if (IsValid(DragAndDropDestination)) {
+		DragAndDropDestination->OnActorBeginOverlap.AddDynamic
+		(this, &AInteractableActor::OnBeginOverlapWithDragAndDropDestination);
+		DragAndDropDestination->OnActorEndOverlap.AddDynamic
+		(this, &AInteractableActor::OnEndOverlapWithDragAndDropDestination);
+	}
 	bIsDragged = true;
 	SetActorRotation(FRotator(0.0f, 0.0f, 0.0f));
 	//WriteActionEverywhere(TEXT("InformantDragItem"));
@@ -120,13 +115,19 @@ void AInteractableActor::OnDrop()
 	{
 		SetActorLocationAndRotation(DragAndDropDestination->GetActorLocation(),
 			DragAndDropDestination->GetActorRotation());
+		OldTransform = GetActorTransform();
+		OnMove(OldTransform);
 		IsInDestination = true;
 	}
 	else
 	{
-		SetActorTransform(OldTransform);
+		SetActorLocationAndRotation(OldTransform.GetLocation(), OldTransform.GetRotation());
 	}
 	OnDrop_BP(IsInDestination);
+	if (IsValid(DragAndDropDestination)) {
+		DragAndDropDestination->OnActorBeginOverlap.Clear();
+		DragAndDropDestination->OnActorEndOverlap.Clear();
+	}
 	bActorInDragAndDropDestination = false;
 	bIsDragged = false;
 }

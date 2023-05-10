@@ -191,6 +191,14 @@ void ABaseInformant::Tick(float DeltaTime)
 				newPosition = GetActorLocation();
 		}
 
+		if (IsValid(DraggedActor_RHand) || IsValid(DraggedActor_RHand))
+		{
+			DragDistance += DeltaDragDistance;
+			if (DragDistance > MaxDragDistance)
+				DragDistance = MaxDragDistance;
+			if (DragDistance < 0.0f)
+				DragDistance = 0.0f;
+		}
 		//Process Drag&Drop with right hand
 		if (IsValid(DraggedActor_RHand))
 		{
@@ -246,20 +254,24 @@ void ABaseInformant::Tick(float DeltaTime)
 void ABaseInformant::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
 	Super::SetupPlayerInputComponent(PlayerInputComponent);
-	InputComponent->BindAction("RController_Trigger", IE_Pressed, this, &ABaseInformant::OnRTriggerPressed);
-	InputComponent->BindAction("RController_Trigger", IE_Released, this, &ABaseInformant::OnRTriggerReleased);
-	InputComponent->BindAction("LController_Trigger", IE_Pressed, this, &ABaseInformant::OnLTriggerPressed);
-	InputComponent->BindAction("LController_Trigger", IE_Released, this, &ABaseInformant::OnLTriggerReleased);
-	InputComponent->BindAction("Walking", IE_Pressed, this, &ABaseInformant::Walking_Trajectory);
-	InputComponent->BindAction("Walking", IE_Released, this, &ABaseInformant::Walking_Teleport);
-	InputComponent->BindAction("RController_Grip", IE_Pressed, this, &ABaseInformant::DragActor_RHand);
-	InputComponent->BindAction("RController_Grip", IE_Released, this, &ABaseInformant::DropActor_RHand);
-	InputComponent->BindAction("LController_Grip", IE_Pressed, this, &ABaseInformant::DragActor_LHand);
-	InputComponent->BindAction("LController_Grip", IE_Released, this, &ABaseInformant::DropActor_LHand);
-	InputComponent->BindAction("Quit", IE_Pressed, this, &ABaseInformant::QuitGame);
+	InputComponent->BindAction(FName(TEXT("RController_Trigger")), IE_Pressed, this, &ABaseInformant::OnRTriggerPressed);
+	InputComponent->BindAction(FName(TEXT("RController_Trigger")), IE_Released, this, &ABaseInformant::OnRTriggerReleased);
+	InputComponent->BindAction(FName(TEXT("LController_Trigger")), IE_Pressed, this, &ABaseInformant::OnLTriggerPressed);
+	InputComponent->BindAction(FName(TEXT("LController_Trigger")), IE_Released, this, &ABaseInformant::OnLTriggerReleased);
+	InputComponent->BindAction(FName(TEXT("Walking")), IE_Pressed, this, &ABaseInformant::Walking_Trajectory);
+	InputComponent->BindAction(FName(TEXT("Walking")), IE_Released, this, &ABaseInformant::Walking_Teleport);
+	InputComponent->BindAction(FName(TEXT("RController_Grip")), IE_Pressed, this, &ABaseInformant::DragActor_RHand);
+	InputComponent->BindAction(FName(TEXT("RController_Grip")), IE_Released, this, &ABaseInformant::DropActor_RHand);
+	InputComponent->BindAction(FName(TEXT("LController_Grip")), IE_Pressed, this, &ABaseInformant::DragActor_LHand);
+	InputComponent->BindAction(FName(TEXT("LController_Grip")), IE_Released, this, &ABaseInformant::DropActor_LHand);
+	InputComponent->BindAction(FName(TEXT("Quit")), IE_Pressed, this, &ABaseInformant::QuitGame);
+	InputComponent->BindAction(FName(TEXT("DragObject_MoveNear")), IE_Pressed, this, &ABaseInformant::DraggedObjectMoveNear);
+	InputComponent->BindAction(FName(TEXT("DragObject_MoveNear")), IE_Released, this, &ABaseInformant::DraggedObjectStop);
+	InputComponent->BindAction(FName(TEXT("DragObject_MoveFar")), IE_Pressed, this, &ABaseInformant::DraggedObjectMoveFar);
+	InputComponent->BindAction(FName(TEXT("DragObject_MoveFar")), IE_Released, this, &ABaseInformant::DraggedObjectStop);
 	if (bUseMouseControlling) {
-		InputComponent->BindAxis("CameraMove_RightLeft", this, &ABaseInformant::CameraMove_LeftRight);
-		InputComponent->BindAxis("CameraMove_UpDown", this, &ABaseInformant::CameraMove_UpDown);
+		InputComponent->BindAxis(FName(TEXT("CameraMove_RightLeft")), this, &ABaseInformant::CameraMove_LeftRight);
+		InputComponent->BindAxis(FName(TEXT("CameraMove_UpDown")), this, &ABaseInformant::CameraMove_UpDown);
 	}
 }
 
@@ -275,7 +287,7 @@ void ABaseInformant::OnExperimentFinished()
 	OnExperimentFinished_BP();
 }
 
-void ABaseInformant::OnRTriggerPressed_Implementation()
+void ABaseInformant::OnRTriggerPressed()
 {
 	if (!MC_Right->bHiddenInGame)
 	{
@@ -292,13 +304,13 @@ void ABaseInformant::OnRTriggerPressed_Implementation()
 				actor->OnPressedByTrigger(hitPoint);
 		}
 	}
-
+	OnRTriggerPressed_BP();
 	//start event of clicking
 	FKey LMB(TEXT("LeftMouseButton"));
 	MC_Right_Interaction_Lazer->PressPointerKey(LMB);
 }
 
-void ABaseInformant::OnRTriggerReleased_Implementation()
+void ABaseInformant::OnRTriggerReleased()
 {
 	if (!MC_Right->bHiddenInGame)
 	{
@@ -315,14 +327,15 @@ void ABaseInformant::OnRTriggerReleased_Implementation()
 				actor->OnReleasedByTrigger(hitPoint);
 		}
 	}
+	OnRTriggerReleased_BP();
 	//start event of clicking
 	FKey LMB(TEXT("LeftMouseButton"));
 	MC_Right_Interaction_Lazer->ReleasePointerKey(LMB);
 }
 
-void ABaseInformant::OnLTriggerPressed_Implementation() {}
+void ABaseInformant::OnLTriggerPressed() {}
 
-void ABaseInformant::OnLTriggerReleased_Implementation() {}
+void ABaseInformant::OnLTriggerReleased() {}
 
 void ABaseInformant::CameraMove_LeftRight(float value)
 {
@@ -340,7 +353,7 @@ void ABaseInformant::CameraMove_UpDown(float value)
 	CameraComponent->SetRelativeRotation(FRotator(CameraPitch, 0.0f, 0.0f));
 }
 
-void ABaseInformant::DragActor_RHand_Implementation()
+void ABaseInformant::DragActor_RHand()
 {
 	if (!MC_Right->bHiddenInGame)
 	{
@@ -348,27 +361,33 @@ void ABaseInformant::DragActor_RHand_Implementation()
 		GetGaze(gaze);
 		auto GM = GetWorld()->GetAuthGameMode<AVRGameModeBase>();
 		FVector trigger_ray = MC_Right->GetComponentLocation() +
-			MC_Right->GetForwardVector() * DragDistance;
+			MC_Right->GetForwardVector() * MaxDragDistance;
 		FHitResult hitPoint(ForceInit);
 		if (GM->RayTrace(this, MC_Right->GetComponentLocation(), trigger_ray, hitPoint))
 		{
 			auto actor = Cast<AInteractableActor>(hitPoint.Actor);
 			if (IsValid(actor) && actor->bIsDraggable) {
 				DraggedActor_RHand = actor;
+				DragDistance = hitPoint.Distance;
 				DraggedActor_RHand->OnDrag();
 			}
 		}
 	}
+	DragActor_RHand_BP();
+	DraggedObjectStop();
 }
 
-void ABaseInformant::DropActor_RHand_Implementation()
+void ABaseInformant::DropActor_RHand()
 {
+	DropActor_RHand_BP();
 	if (IsValid(DraggedActor_RHand))
 		DraggedActor_RHand->OnDrop();
 	DraggedActor_RHand = nullptr;
+	DragDistance = -1.0f;
+	DraggedObjectStop();
 }
 
-void ABaseInformant::DragActor_LHand_Implementation()
+void ABaseInformant::DragActor_LHand()
 {
 	if (!MC_Left->bHiddenInGame)
 	{
@@ -387,13 +406,35 @@ void ABaseInformant::DragActor_LHand_Implementation()
 			}
 		}
 	}
+	DragActor_LHand_BP();
+	DraggedObjectStop();
 }
 
-void ABaseInformant::DropActor_LHand_Implementation()
+void ABaseInformant::DropActor_LHand()
 {
+	DropActor_LHand_BP();
 	if (IsValid(DraggedActor_LHand))
 		DraggedActor_LHand->OnDrop();
 	DraggedActor_LHand = nullptr;
+	DragDistance = -1.0f;
+	DraggedObjectStop();
+}
+
+void ABaseInformant::DraggedObjectMoveFar()
+{
+	if (IsValid(DraggedActor_RHand) || IsValid(DraggedActor_RHand))
+		DeltaDragDistance = 1.0f;
+}
+
+void ABaseInformant::DraggedObjectMoveNear()
+{
+	if (IsValid(DraggedActor_RHand) || IsValid(DraggedActor_RHand))
+		DeltaDragDistance = -1.0f;
+}
+
+void ABaseInformant::DraggedObjectStop()
+{
+	DeltaDragDistance = 0.0f;
 }
 
 void ABaseInformant::Walking_Trajectory()

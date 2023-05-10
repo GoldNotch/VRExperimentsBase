@@ -131,34 +131,48 @@ protected:
 	UFUNCTION(BlueprintImplementableEvent, meta = (DisplayName = "OnExperimentFinished"))
 	void OnExperimentFinished_BP();
 
-	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category="Input")
-	void OnRTriggerPressed();
-	virtual void OnRTriggerPressed_Implementation();
-	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Input")
-	void OnRTriggerReleased();
-	virtual void OnRTriggerReleased_Implementation();
-	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Input")
-	void OnLTriggerPressed();
-	virtual void OnLTriggerPressed_Implementation();
-	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Input")
-	void OnLTriggerReleased();
-	virtual void OnLTriggerReleased_Implementation();
+	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable, Category="Input")
+	void OnRTriggerPressed_BP();
+	UFUNCTION()
+	virtual void OnRTriggerPressed();
+	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable, Category = "Input")
+	void OnRTriggerReleased_BP();
+	UFUNCTION()
+	virtual void OnRTriggerReleased();
+	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable, Category = "Input")
+	void OnLTriggerPressed_BP();
+	UFUNCTION()
+	virtual void OnLTriggerPressed();
+	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable, Category = "Input")
+	void OnLTriggerReleased_BP();
+	UFUNCTION()
+	virtual void OnLTriggerReleased();
 	void CameraMove_LeftRight(float value);
 	void CameraMove_UpDown(float value);
-	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Input")
-	void DragActor_RHand();
-	virtual void DragActor_RHand_Implementation();
-	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Input")
-	void DropActor_RHand();
-	virtual void DropActor_RHand_Implementation();
-	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Input")
-	void DragActor_LHand();
-	virtual void DragActor_LHand_Implementation();
-	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Input")
-	void DropActor_LHand();
-	virtual void DropActor_LHand_Implementation();
+	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable, Category = "Input")
+	void DragActor_RHand_BP();
+	UFUNCTION()
+	virtual void DragActor_RHand();
+	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable, Category = "Input")
+	void DropActor_RHand_BP();
+	UFUNCTION()
+	virtual void DropActor_RHand();
+	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable, Category = "Input")
+	void DragActor_LHand_BP();
+	UFUNCTION()
+	virtual void DragActor_LHand();
+	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable, Category = "Input")
+	void DropActor_LHand_BP();
+	UFUNCTION()
+	virtual void DropActor_LHand();
 	float Yaw;
 	float CameraPitch;
+	UFUNCTION()
+	void DraggedObjectMoveFar();
+	UFUNCTION()
+	void DraggedObjectMoveNear();
+	UFUNCTION()
+	void DraggedObjectStop();
 
 	//------------ Walking -----------------
 	UFUNCTION()
@@ -174,7 +188,9 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadonly)
 	float InteractionDistance = 1000.0f;
 	UPROPERTY(VisibleAnywhere, BlueprintReadonly)
-	float DragDistance = 50.0f;
+	float MaxDragDistance = 500.0f;
+	float DragDistance = -1.0f;
+	float DeltaDragDistance = 0.0f;
 protected:
 	TSet<AActor*> close_actors;
 	class AInteractableActor* eye_tracked_actor = nullptr;
