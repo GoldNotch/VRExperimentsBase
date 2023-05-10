@@ -29,11 +29,11 @@ void AInteractableActor::BeginPlay()
 void AInteractableActor::Tick(float DeltaTime)
 {
 	auto& current_transform = GetActorTransform();
-	//if (!current_transform.Equals(OldTransform))//actor was replaced
-	//{
-	//	OldTransform = current_transform;
-	//	SendBBoxToSciVi();
-	//}
+	if (!current_transform.Equals(OldTransform))//actor was replaced
+	{
+		OldTransform = current_transform;
+		OnMove(current_transform);
+	}
 }
 
 //-------------------- Events -------------------
@@ -129,6 +129,11 @@ void AInteractableActor::OnDrop()
 	OnDrop_BP(IsInDestination);
 	bActorInDragAndDropDestination = false;
 	bIsDragged = false;
+}
+
+void AInteractableActor::OnMove(const FTransform& new_transform)
+{
+	OnMove_BP(new_transform);
 }
 
 void AInteractableActor::OnBeginOverlapWithDragAndDropDestination(AActor* OverlappedActor, AActor* OtherActor)

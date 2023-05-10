@@ -16,9 +16,9 @@ USubmixRecorder::USubmixRecorder()
 }
 
 // Called when the game starts
-void USubmixRecorder::BeginPlay()
+void USubmixRecorder::InitializeComponent()
 {
-	Super::BeginPlay();
+	Super::InitializeComponent();
 	if (!GEngine) return;
 	if (NumChannelsToRecord == 1 || NumChannelsToRecord == 2) {
 		if (FAudioDevice* AudioDevice = GetWorld()->GetAudioDeviceRaw())
@@ -30,21 +30,23 @@ void USubmixRecorder::BeginPlay()
 
 void USubmixRecorder::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
 {
-	FScopeLock lock(&use_queue);
-	if (!RecordQueue.IsEmpty())
+	if (bIsRecording)
 	{
-		if (OnRecorded) 
+		FScopeLock lock(&use_queue);
+		if (!RecordQueue.IsEmpty())
 		{
-			auto& buffer = RecordQueue.Peek();
-			OnRecorded(buffer.GetData(), buffer.GetNumChannels(), buffer.GetNumSamples(), buffer.GetSampleRate());
+			if (OnRecorded)
+			{
+				auto& buffer = RecordQueue.Peek();
+				OnRecorded(buffer.GetData(), buffer.GetNumChannels(), buffer.GetNumSamples(), buffer.GetSampleRate());
+			}
+			RecordQueue.Pop();
+			bRecordFinished = false;
 		}
-		RecordQueue.Pop();
-		bRecordFinished = false;
 	}
-	else
-	if (OnRecordFinished && !bIsRecording && !bRecordFinished)
+	else if (!bRecordFinished)
 	{
-		OnRecordFinished();
+		if (OnRecordFinished) OnRecordFinished();
 		bRecordFinished = true;
 	}
 }
@@ -52,6 +54,7 @@ void USubmixRecorder::TickComponent(float DeltaTime, ELevelTick TickType, FActor
 void USubmixRecorder::DestroyComponent(bool bPromoteChildren)
 {
 	Super::DestroyComponent(bPromoteChildren);
+	UE_LOG(LogTemp, Display, TEXT("Destroy SubmixRecorder"));
 	if (!GEngine) return;
 	if (FAudioDevice* AudioDevice = GetWorld()->GetAudioDeviceRaw())
 	{

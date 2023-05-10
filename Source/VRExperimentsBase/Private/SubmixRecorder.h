@@ -18,9 +18,9 @@ public:
 
 protected:
 	// Called when the game starts
-	virtual void BeginPlay() override;
 public:	
 	// Called every frame
+	virtual void InitializeComponent() override;
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 	virtual void DestroyComponent(bool bPromoteChildren = false) override;
 	int32 NumChannelsToRecord = 2;//support only 1 or 2

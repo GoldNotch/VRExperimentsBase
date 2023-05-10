@@ -34,6 +34,4 @@ protected:
 	
 	struct Impl;
 	Impl* impl;
-	FString NoSciViConnectionLogMessage = TEXT("This project doesn't use SciVi Connection. " 
-												"Please inherit game mode from VRGameModeBase or use #define _USE_SCIVI_CONNECTION_");
 };

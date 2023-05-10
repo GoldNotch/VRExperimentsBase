@@ -105,6 +105,12 @@ void ABaseInformant::BeginPlay()
 		GM->NotifyInformantSpawned(this);
 }
 
+void ABaseInformant::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	Super::EndPlay(EndPlayReason);
+	AudioCapture->Deactivate();
+}
+
 // Called every frame
 void ABaseInformant::Tick(float DeltaTime)
 {

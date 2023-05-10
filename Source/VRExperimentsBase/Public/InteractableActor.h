@@ -50,6 +50,7 @@ public:
 	//Drag&Drop
 	virtual void OnDrag();
 	virtual void OnDrop();
+	virtual void OnMove(const FTransform& new_transform);
 
 protected:
 	UFUNCTION(BlueprintImplementableEvent, meta = (DisplayName = "OnExperimentStarted"))
@@ -83,6 +84,8 @@ protected:
 	void OnDrag_BP();
 	UFUNCTION(BlueprintImplementableEvent, meta = (DisplayName = "OnDrop"))
 	void OnDrop_BP(bool IsInDestination);
+	UFUNCTION(BlueprintImplementableEvent, meta = (DisplayName = "OnMove"))
+	void OnMove_BP(const FTransform& new_transform);
 
 	UFUNCTION()
 	void OnBeginOverlapWithDragAndDropDestination(AActor* OverlappedActor, AActor* OtherActor);

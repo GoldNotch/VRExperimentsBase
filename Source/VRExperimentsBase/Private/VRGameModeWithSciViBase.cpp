@@ -102,8 +102,15 @@ private:
 	std::unique_ptr<std::thread> thread;
 	TQueue<FString> message_queue;
 };
+#else
+struct AVRGameModeWithSciViBase::Impl
+{
+	Impl(AVRGameModeWithSciViBase& owner) {};
+	void Tick(float DeltaTime) {}
+	void SendToSciVi(const FString& message) {}
+};
 
-#endif
+#endif // _USE_SCIVI_CONNECTION_
 
 void AVRGameModeWithSciViBase::Tick(float DeltaTime)
 {
