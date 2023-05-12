@@ -60,13 +60,13 @@ protected:
 	virtual void OnRecordBatch(const int16* AudioData, int NumChannels, int NumSamples, int SampleRate) {}
 	virtual void OnFinishRecord() {}
 
+	UPROPERTY()
+	class UMediaPlayer* player;
 public:
 	UFUNCTION(BlueprintCallable)
 	void PlaySound(const FString& path);
 	UFUNCTION(BlueprintCallable)
 	void StopSound();
-	UFUNCTION(BlueprintCallable)
-	void FlushSound();
 	UFUNCTION(BlueprintCallable)
 	bool IsSoundPlaying() const;
 
@@ -118,7 +118,7 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadonly)
 	UHapticFeedbackEffect_Base* VibrationEffect;
 
-	virtual void OnExperimentStarted();
+	virtual void OnExperimentStarted(const FString& InformantName);
 	virtual void OnExperimentFinished();
 
 protected:

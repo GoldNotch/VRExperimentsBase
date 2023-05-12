@@ -76,10 +76,8 @@ ABaseInformant::ABaseInformant()
 	InteractionCollider->SetupAttachment(RootComponent);
 	InteractionCollider->SetSphereRadius(InteractionDistance);
 
-	UMediaPlayer* media_player = NewObject<UMediaPlayer>(this, TEXT("MediaPlayer"));
 	MediaSound = CreateDefaultSubobject<UMediaSoundComponent>(TEXT("MediaSound"));
 	MediaSound->SetupAttachment(RootComponent);
-	MediaSound->SetMediaPlayer(media_player);
 }
 
 // Called when the game starts or when spawned
@@ -97,9 +95,9 @@ void ABaseInformant::BeginPlay()
 	{OnRecordBatch(AudioData, NumChannels, NumSamples, SampleRate); };
 	RecorderComponent->OnRecordFinished = [this] {OnFinishRecord(); };
 
-	AudioCapture->Activate();
 	FloorHeight = GetActorLocation().Z - (RootComponent->CalcLocalBounds().BoxExtent.Z);
-
+	player = NewObject<UMediaPlayer>(MediaSound);
+	MediaSound->SetMediaPlayer(player);
 	auto GM = GetWorld()->GetAuthGameMode<AVRGameModeBase>();
 	if (GM)
 		GM->NotifyInformantSpawned(this);
@@ -108,7 +106,6 @@ void ABaseInformant::BeginPlay()
 void ABaseInformant::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
 	Super::EndPlay(EndPlayReason);
-	AudioCapture->Deactivate();
 }
 
 // Called every frame
@@ -277,7 +274,7 @@ void ABaseInformant::SetupPlayerInputComponent(UInputComponent* PlayerInputCompo
 
 //------------------- Input Events ----------------------
 
-void ABaseInformant::OnExperimentStarted()
+void ABaseInformant::OnExperimentStarted(const FString& InformantName)
 {
 	OnExperimentStarted_BP();
 }
@@ -552,7 +549,7 @@ bool ABaseInformant::IsRecording() const
 
 void ABaseInformant::PlaySound(const FString& path)
 {
-	if (!MediaSound->GetMediaPlayer())
+	if (!IsValid(MediaSound) || !IsValid(MediaSound->GetMediaPlayer()))
 	{
 		UE_LOG(LogAudio, Error, TEXT("MediaSound Component hasn't media player set"));
 		return;
@@ -561,14 +558,13 @@ void ABaseInformant::PlaySound(const FString& path)
 	{
 		playing_sound = path;
 		MediaSound->GetMediaPlayer()->OpenFile(playing_sound);
-		auto t = FDateTime::Now().ToUnixTimestamp() * 1000;
 		if (auto GM = GetWorld()->GetAuthGameMode<AVRGameModeBase>())
 		{
-			auto csv = FString::Printf(TEXT("%lli;PlayAudioDescription;%s\n"), t, *path);
+			auto csv = FString::Printf(TEXT("PlayAudioDescription;%s\n"), *path);
 			GM->WriteToExperimentLog(ExperimentLogType::Events, csv);
 			if (auto GM_with_scivi = GetWorld()->GetAuthGameMode<AVRGameModeWithSciViBase>())
 			{
-				auto json = FString::Printf(TEXT("\"PlayAudioDescription\":{\"Name\": \"%s\"}"), *path);
+				auto json = FString::Printf(TEXT("\"PlayAudioDescription\": \"%s\""), *path);
 				GM_with_scivi->SendToSciVi(json);
 			}
 		}
@@ -578,40 +574,29 @@ void ABaseInformant::PlaySound(const FString& path)
 
 void ABaseInformant::StopSound()
 {
-	if (!MediaSound->GetMediaPlayer())
+	if (!IsValid(MediaSound) || !IsValid(MediaSound->GetMediaPlayer()))
 	{
 		UE_LOG(LogAudio, Error, TEXT("MediaSound Component hasn't media player set"));
 		return;
 	}
 	MediaSound->GetMediaPlayer()->Pause();
-}
-
-void ABaseInformant::FlushSound()
-{
-	if (!MediaSound->GetMediaPlayer())
-	{
-		UE_LOG(LogAudio, Error, TEXT("MediaSound Component hasn't media player set"));
-		return;
-	}
-	StopSound();
-	auto t = FDateTime::Now().ToUnixTimestamp() * 1000;
 	if (auto GM = GetWorld()->GetAuthGameMode<AVRGameModeBase>())
 	{
-		auto csv = FString::Printf(TEXT("%lli;StopAudioDescription;%s\n"), t, *playing_sound);
+		auto csv = FString::Printf(TEXT("StopAudioDescription;%s\n"), *playing_sound);
 		GM->WriteToExperimentLog(ExperimentLogType::Events, csv);
 		if (auto GM_with_scivi = GetWorld()->GetAuthGameMode<AVRGameModeWithSciViBase>())
 		{
-			auto json = FString::Printf(TEXT("\"StopAudioDescription\":{\"Name\": \"%s\"}"), *playing_sound);
+			auto json = FString::Printf(TEXT("\"StopAudioDescription\": \"%s\""), *playing_sound);
 			GM_with_scivi->SendToSciVi(json);
 		}
 	}
-	MediaSound->GetMediaPlayer()->Close();
 	playing_sound.Empty();
 }
 
+
 bool ABaseInformant::IsSoundPlaying() const
 {
-	return MediaSound->GetMediaPlayer() != nullptr && MediaSound->GetMediaPlayer()->IsPlaying();
+	return IsValid(MediaSound) && IsValid(MediaSound->GetMediaPlayer()) && MediaSound->GetMediaPlayer()->IsPlaying();
 }
 
 void ABaseInformant::EnableInputEvents(bool enable)

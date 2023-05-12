@@ -14,15 +14,14 @@ class USubmixRecorder : public USceneComponent, public ISubmixBufferListener
 
 public:	
 	// Sets default values for this component's properties
-	USubmixRecorder();
+	USubmixRecorder(const FObjectInitializer& ObjectInitializer);
 
 protected:
 	// Called when the game starts
 public:	
-	// Called every frame
-	virtual void InitializeComponent() override;
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
-	virtual void DestroyComponent(bool bPromoteChildren = false) override;
+	virtual void OnRegister() override;
+	virtual void OnUnregister() override;
 	int32 NumChannelsToRecord = 2;//support only 1 or 2
 	TFunction<void(const int16*, int, int, int)> OnRecorded = nullptr;
 	TFunction<void()> OnRecordFinished = nullptr;
@@ -39,11 +38,11 @@ public:
 	class USoundSubmix* SubmixToRecord = nullptr;
 
 protected:
-	FCriticalSection use_queue;
+	//FCriticalSection use_queue;
 	FThreadSafeBool bIsRecording = false;
 	bool bRecordFinished = true;
-	TResizableCircularQueue<Audio::TSampleBuffer<int16>> RecordQueue{ 64 };
-
+	//TResizableCircularQueue<Audio::TSampleBuffer<int16>> RecordQueue{ 64 };
+	TQueue<Audio::TSampleBuffer<int16>> RecordQueue;
 	//---------------- ISubmixBufferListener Interface ---------------
 	virtual void OnNewSubmixBuffer(const USoundSubmix* OwningSubmix,
 		float* AudioData, int32 NumSamples, int32 NumChannels,

@@ -17,7 +17,8 @@ public:
 	virtual void Tick(float DeltaTime) override;
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 	virtual void NotifyInformantSpawned(class ABaseInformant* _informant) override;
-
+	virtual void OnSciViConnected() { OnSciViConnected_BP(); }
+	virtual void OnSciViDisconnected() { OnSciViDisconnected_BP(); };
 	// ----------------------- SciVi networking--------------
 public:
 	UFUNCTION(BlueprintCallable, Category = "SciVi",  DisplayName = "SendToSciVi")
@@ -25,9 +26,9 @@ public:
 	UFUNCTION(BlueprintImplementableEvent, Category = "SciVi", DisplayName = "OnSciViMessageReceived")
 	void OnSciViMessageReceived_BP(const FBlueprintJsonObject& msgJson);
 	UFUNCTION(BlueprintImplementableEvent, Category = "SciVi")
-	void OnSciViConnected();
+	void OnSciViConnected_BP();
 	UFUNCTION(BlueprintImplementableEvent, Category = "SciVi")
-	void OnSciViDisconnected();
+	void OnSciViDisconnected_BP();
 protected:
 	virtual void OnSciViMessageReceived(TSharedPtr<FJsonObject> msgJson);
 	void initWS();

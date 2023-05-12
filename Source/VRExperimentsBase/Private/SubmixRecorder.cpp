@@ -8,54 +8,58 @@
 
 
 // Sets default values for this component's properties
-USubmixRecorder::USubmixRecorder()
+USubmixRecorder::USubmixRecorder(const FObjectInitializer& ObjectInitializer) :
+	Super(ObjectInitializer)
 {
 	// Set this component to be initialized when the game starts, and to be ticked every frame.  You can turn these features
 	// off to improve performance if you don't need them.
 	PrimaryComponentTick.bCanEverTick = true;
+	bWantsInitializeComponent = true;
 }
 
-// Called when the game starts
-void USubmixRecorder::InitializeComponent()
-{
-	Super::InitializeComponent();
-	if (!GEngine) return;
-	if (NumChannelsToRecord == 1 || NumChannelsToRecord == 2) {
-		if (FAudioDevice* AudioDevice = GetWorld()->GetAudioDeviceRaw())
-			AudioDevice->RegisterSubmixBufferListener(this, SubmixToRecord);
-	}
-	else
-		UE_LOG(LogAudio, Warning, TEXT("SubmixRecorder supports only 1 or 2 channels to record"));
-}
 
 void USubmixRecorder::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
 {
-	if (bIsRecording)
+	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
+	if (IsActive())
 	{
-		FScopeLock lock(&use_queue);
+		//FScopeLock lock(&use_queue);
 		if (!RecordQueue.IsEmpty())
 		{
 			if (OnRecorded)
 			{
-				auto& buffer = RecordQueue.Peek();
+				Audio::TSampleBuffer<int16> buffer;
+				RecordQueue.Dequeue(buffer);
 				OnRecorded(buffer.GetData(), buffer.GetNumChannels(), buffer.GetNumSamples(), buffer.GetSampleRate());
 			}
-			RecordQueue.Pop();
-			bRecordFinished = false;
+			else RecordQueue.Pop();
 		}
 	}
-	else if (!bRecordFinished)
+
+	if (RecordQueue.IsEmpty() && !bIsRecording && !bRecordFinished)
 	{
 		if (OnRecordFinished) OnRecordFinished();
 		bRecordFinished = true;
 	}
 }
 
-void USubmixRecorder::DestroyComponent(bool bPromoteChildren)
+void USubmixRecorder::OnRegister()
 {
-	Super::DestroyComponent(bPromoteChildren);
-	UE_LOG(LogTemp, Display, TEXT("Destroy SubmixRecorder"));
+	Super::OnRegister();
 	if (!GEngine) return;
+	if (NumChannelsToRecord == 1 || NumChannelsToRecord == 2) {
+		if (FAudioDevice* AudioDevice = GetWorld()->GetAudioDeviceRaw())
+		{
+			AudioDevice->RegisterSubmixBufferListener(this, SubmixToRecord);
+		}
+	}
+	else
+		UE_LOG(LogAudio, Warning, TEXT("SubmixRecorder supports only 1 or 2 channels to record"));
+}
+
+void USubmixRecorder::OnUnregister()
+{
+	Super::OnUnregister();
 	if (FAudioDevice* AudioDevice = GetWorld()->GetAudioDeviceRaw())
 	{
 		AudioDevice->UnregisterSubmixBufferListener(this, SubmixToRecord);
@@ -75,11 +79,10 @@ void USubmixRecorder::StopRecording()
 
 void USubmixRecorder::OnNewSubmixBuffer(const USoundSubmix* OwningSubmix, float* AudioData, int32 NumSamples, int32 NumChannels, const int32 SampleRate, double AudioClock)
 {
-	if (bIsRecording) 
+	if (bIsRecording)
 	{
-		FScopeLock lock(&use_queue);
-		auto& buffer = RecordQueue.EnqueueDefaulted_GetRef();
-		buffer.Append(AudioData, NumSamples, NumChannels, SampleRate);
+		Audio::TSampleBuffer<int16> buffer(AudioData, NumSamples, NumChannels, SampleRate);
 		buffer.MixBufferToChannels(NumChannelsToRecord);
+		RecordQueue.Enqueue(buffer);
 	}
-}																																																			
+}

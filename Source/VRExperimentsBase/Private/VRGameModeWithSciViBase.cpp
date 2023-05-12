@@ -89,10 +89,8 @@ struct AVRGameModeWithSciViBase::Impl
 
 	void SendToSciVi(const FString& message)
 	{
-		#ifdef _USE_SCIVI_CONNECTION_
-			for (auto& connection : m_server.get_connections())//broadcast to everyone
-				connection->send(TCHAR_TO_UTF8(*message));
-		#endif
+		for (auto& connection : m_server.get_connections())//broadcast to everyone
+			connection->send(TCHAR_TO_UTF8(*message));
 	}
 
 private:
@@ -139,8 +137,11 @@ void AVRGameModeWithSciViBase::initWS()
 
 void AVRGameModeWithSciViBase::SendToSciVi(const FString& message)
 {
-	auto msg = FString::Printf(TEXT("{\"Time\": %lli, %s}"), GetLogTimestamp(), *message);
-	impl->SendToSciVi(msg);
+	if (bExperimentRunning && bRecordLogs) 
+	{
+		auto msg = FString::Printf(TEXT("{\"Time\": %lli, %s}"), GetLogTimestamp(), *message);
+		impl->SendToSciVi(msg);
+	}
 }
 
 void AVRGameModeWithSciViBase::OnSciViMessageReceived(TSharedPtr<FJsonObject> msgJson)
