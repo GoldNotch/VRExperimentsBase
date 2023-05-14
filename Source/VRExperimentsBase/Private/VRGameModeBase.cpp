@@ -124,6 +124,7 @@ void AVRGameModeBase::StartExperiment(bool recording/* = true*/, FString _Inform
 	if (IsInGameThread()) {
 		bExperimentStarting = false;
 		bExperimentRunning = true;
+		CurrentExpeirmentStepIndex = -1;
 		if (HasExperimentSteps())
 			NextExperimentStep();
 
@@ -180,8 +181,10 @@ void AVRGameModeBase::FinishExperiment(int code, const FString& message)
 
 void AVRGameModeBase::NextExperimentStep()
 {
-	if (CurrentExpeirmentStepIndex >= ExperimentSteps.Num() - 1)
-		FinishExperiment(0, TEXT("Experiment is over due to all steps are passed"));
+	if (CurrentExpeirmentStepIndex >= ExperimentSteps.Num() - 1) {
+		if (IsExperimentStarted())
+			FinishExperiment(0, TEXT("Experiment is over due to all steps are passed"));
+	}
 	else
 	{
 		if (IsValid(CurrentExperimentStep)) {

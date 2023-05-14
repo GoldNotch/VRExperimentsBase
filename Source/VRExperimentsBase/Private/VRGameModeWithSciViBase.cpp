@@ -36,12 +36,14 @@ struct AVRGameModeWithSciViBase::Impl
 		ep.on_open = [this](std::shared_ptr<WSServer::Connection> connection)
 		{
 			UE_LOG(LogTemp, Display, TEXT("WebSocket: Opened"));
+			message_queue.Empty();
 			owner.OnSciViConnected();
 		};
 
 		ep.on_close = [this](std::shared_ptr<WSServer::Connection> connection, int status, const std::string&)
 		{
 			UE_LOG(LogTemp, Display, TEXT("WebSocket: Closed"));
+			message_queue.Empty();
 			owner.OnSciViDisconnected();
 		};
 
@@ -75,6 +77,11 @@ struct AVRGameModeWithSciViBase::Impl
 				if (jsonParsed->TryGetField("calibrate")) owner.CalibrateVR();
 				else if (jsonParsed->TryGetField(TEXT("nextExperimentStep")))
 					owner.NextExperimentStep();
+				else if (jsonParsed->TryGetField(TEXT("resetExperimentStep")))
+				{
+					owner.FinishExperiment(0, "reset");
+					owner.StartExperiment(owner.bRecordLogs, owner.InformantName);
+				}
 				else if (jsonParsed->TryGetField(TEXT("prevExperimentStep")))
 					owner.PrevExperimentStep();
 				else if (jsonParsed->TryGetField(TEXT("startExperiment")))
