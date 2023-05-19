@@ -113,6 +113,7 @@ bool AVRGameModeBase::RayTrace(const AActor* ignoreActor, const FVector& origin,
 
 void AVRGameModeBase::StartExperiment(bool recording/* = true*/, FString _InformantName/* = FString()*/)
 {
+	check(!IsExperimentStarted());
 	if (_InformantName.IsEmpty())
 	{
 		_InformantName = TEXT("Informant_") + FGuid::NewGuid().ToString();
@@ -127,7 +128,7 @@ void AVRGameModeBase::StartExperiment(bool recording/* = true*/, FString _Inform
 		CurrentExpeirmentStepIndex = -1;
 		if (HasExperimentSteps())
 			NextExperimentStep();
-
+		UE_LOG(LogExperiment, Display, TEXT("Experiment started"));
 		if (bRecordLogs)
 		{
 			FString now = FDateTime::Now().ToString();
@@ -163,7 +164,12 @@ void AVRGameModeBase::StartExperiment(bool recording/* = true*/, FString _Inform
 
 void AVRGameModeBase::FinishExperiment(int code, const FString& message)
 {
+	check(IsExperimentStarted());
 	if (IsInGameThread()) {
+		if (IsValid(CurrentExperimentStep)) {
+			GetWorld()->RemoveActor(CurrentExperimentStep, true);
+			CurrentExperimentStep->Destroy();//it calls end play and quit step
+		}
 		bExperimentFinishing = false;
 		bExperimentRunning = false;
 		CurrentExpeirmentStepIndex = -1;
@@ -181,18 +187,14 @@ void AVRGameModeBase::FinishExperiment(int code, const FString& message)
 
 void AVRGameModeBase::NextExperimentStep()
 {
-	if (CurrentExpeirmentStepIndex >= ExperimentSteps.Num() - 1) {
-		if (IsExperimentStarted())
-			FinishExperiment(0, TEXT("Experiment is over due to all steps are passed"));
+	check(IsExperimentStarted());
+	if (IsValid(CurrentExperimentStep)) {
+		GetWorld()->RemoveActor(CurrentExperimentStep, true);
+		CurrentExperimentStep->Destroy();//it calls end play and quit step
 	}
-	else
+	if (ExperimentSteps.IsValidIndex(CurrentExpeirmentStepIndex + 1))
 	{
-		if (IsValid(CurrentExperimentStep)) {
-			GetWorld()->RemoveActor(CurrentExperimentStep, true);
-			CurrentExperimentStep->Destroy();//it calls end play and quit step
-		}
-		CurrentExpeirmentStepIndex++;
-		auto& step_class = ExperimentSteps[CurrentExpeirmentStepIndex];
+		auto& step_class = ExperimentSteps[++CurrentExpeirmentStepIndex];
 		FActorSpawnParameters params;
 		params.NameMode = FActorSpawnParameters::ESpawnActorNameMode::Requested;
 		params.Name = FName(FString::Printf(TEXT("ExperimentStep_%i"), CurrentExpeirmentStepIndex));
@@ -202,14 +204,15 @@ void AVRGameModeBase::NextExperimentStep()
 
 void AVRGameModeBase::PrevExperimentStep()
 {
-	if (CurrentExpeirmentStepIndex > 0)
+	check(IsExperimentStarted());
+	if (IsValid(CurrentExperimentStep))
 	{
-		if (IsValid(CurrentExperimentStep)) {
-			GetWorld()->RemoveActor(CurrentExperimentStep, true);
-			CurrentExperimentStep->Destroy();//it calls end play and quit step
-		}
-		CurrentExpeirmentStepIndex--;
-		auto& step_class = ExperimentSteps[CurrentExpeirmentStepIndex];
+		GetWorld()->RemoveActor(CurrentExperimentStep, true);
+		CurrentExperimentStep->Destroy();//it calls end play and quit step
+	}
+	if (ExperimentSteps.IsValidIndex(CurrentExpeirmentStepIndex - 1))
+	{
+		auto& step_class = ExperimentSteps[--CurrentExpeirmentStepIndex];
 		FActorSpawnParameters params;
 		params.NameMode = FActorSpawnParameters::ESpawnActorNameMode::Requested;
 		params.Name = FName(FString::Printf(TEXT("ExperimentStep_%i"), CurrentExpeirmentStepIndex));

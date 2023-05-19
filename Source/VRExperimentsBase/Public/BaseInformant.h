@@ -51,14 +51,11 @@ public:
 	UFUNCTION(BlueprintCallable)
 	void SetVisibility_MC_Left(bool visibility);
 	void GetGaze(FGaze& gaze) const;
-	UFUNCTION()
-	void StartRecording();
-	UFUNCTION()
-	void StopRecording();
 	bool IsRecording() const;
 protected:
 	virtual void OnRecordBatch(const int16* AudioData, int NumChannels, int NumSamples, int SampleRate) {}
 	virtual void OnFinishRecord() {}
+	virtual void OnStartRecord() {}
 
 	UPROPERTY()
 	class UMediaPlayer* player;

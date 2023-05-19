@@ -532,16 +532,6 @@ void ABaseInformant::GetGaze(FGaze& gaze) const
 	//here you can insert custom calibration
 }
 
-void ABaseInformant::StartRecording()
-{
-	RecorderComponent->StartRecording();
-}
-
-void ABaseInformant::StopRecording()
-{
-	RecorderComponent->StopRecording();
-}
-
 bool ABaseInformant::IsRecording() const
 {
 	return RecorderComponent->IsRecording();
