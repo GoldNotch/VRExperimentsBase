@@ -54,6 +54,8 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadonly, DisplayName = "Informant")
 	class ABaseInformant* informant;
+	UPROPERTY(EditAnywhere, BlueprintReadonly)
+	FString InformantName;
 	UPROPERTY(EditAnywhere, BlueprintReadwrite)
 	TArray<TSubclassOf<AExperimentStepBase>> ExperimentSteps;
 
@@ -62,19 +64,11 @@ public:
 	bool RayTrace(const AActor* ignoreActor, const FVector& origin, const FVector& end, FHitResult& hitResult);
 	
 	UFUNCTION(BlueprintCallable, Category = "Experiment")
-	void StartExperiment(bool recording = true, FString InformantName = TEXT(""));
+	void StartExperiment(bool recording = true, FString _InformantName = TEXT(""));
 	UFUNCTION(BlueprintCallable, Category = "Experiment")
 	FORCEINLINE bool IsExperimentStarted() { return bExperimentRunning; }
 	UFUNCTION(BlueprintCallable, Category = "Experiment")
 	void FinishExperiment(int code, const FString& message);
-	UFUNCTION()// Use only from other threads
-	void StartExperimentByRemote(bool recording = true) 
-	{
-		bRecordLogs = recording;
-		bExperimentStarting = true;
-	}
-	UFUNCTION()// Use only from other threads
-	void FinishExperimentByRemote() { bExperimentFinishing = true; }
 	UFUNCTION(BlueprintCallable, Category = "Experiment")
 	void NextExperimentStep();
 	UFUNCTION(BlueprintCallable, Category = "Experiment")
@@ -83,10 +77,10 @@ public:
 	FORCEINLINE bool HasExperimentSteps() { return ExperimentSteps.Num() > 0; }
 
 	// events
-	virtual void OnExperimentStarted();
+	virtual void OnExperimentStarted(const FString& InformantName);
 	virtual void OnExperimentFinished(int code, const FString& message);
 	UFUNCTION(BlueprintImplementableEvent, Category = "Experiment", DisplayName = "OnExperimentStarted")
-	void OnExperimentStarted_BP();
+	void OnExperimentStarted_BP(const FString& _InformantName);
 	UFUNCTION(BlueprintImplementableEvent, Category = "Experiment", DisplayName = "OnExperimentFinished")
 	void OnExperimentFinished_BP(int code, const FString& message);
 
@@ -110,6 +104,12 @@ protected:
 
 	FSimpleNoReplyPointerEventHandler OnGameWindowFocusLost;
 	FNoReplyPointerEventHandler OnGameWindowFocus;
+
+	FORCEINLINE int64 GetLogTimestamp() const 
+	{
+		auto t = FDateTime::Now();
+		return t.ToUnixTimestamp() * 1000 + t.GetMillisecond();
+	}
 	//------------------- VR ----------------------
 public:
 	UFUNCTION(BlueprintCallable)

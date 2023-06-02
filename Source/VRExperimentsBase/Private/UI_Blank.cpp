@@ -5,11 +5,12 @@
 #include "Components/WidgetComponent.h"
 
 // Sets default values
-AUI_Blank::AUI_Blank()
+AUI_Blank::AUI_Blank(const FObjectInitializer& ObjectInitializer)
+	:Super(ObjectInitializer)
 {
 	WidgetComponent = CreateDefaultSubobject<UWidgetComponent>(TEXT("Widget"));
 	WidgetComponent->SetBlendMode(EWidgetBlendMode::Transparent);
-	RootComponent = WidgetComponent;
+	WidgetComponent->SetupAttachment(RootComponent);
 }
 
 void AUI_Blank::SetWidgetClass(TSubclassOf<UUserWidget> widget_class, const FVector2D& draw_size)

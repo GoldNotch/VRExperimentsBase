@@ -8,6 +8,8 @@
 #include "Components/ArrowComponent.h"
 #include "Components/SphereComponent.h"
 #include "Components/ForceFeedbackComponent.h"
+#include "MediaSoundComponent.h"
+#include "MediaPlayer.h"
 #include <AudioCaptureComponent.h>
 #include "SubmixRecorder.h"
 #include "SRanipal_API_Eye.h"
@@ -73,6 +75,9 @@ ABaseInformant::ABaseInformant()
 	InteractionCollider = CreateDefaultSubobject<USphereComponent>(TEXT("InteractionCollider"));
 	InteractionCollider->SetupAttachment(RootComponent);
 	InteractionCollider->SetSphereRadius(InteractionDistance);
+
+	MediaSound = CreateDefaultSubobject<UMediaSoundComponent>(TEXT("MediaSound"));
+	MediaSound->SetupAttachment(RootComponent);
 }
 
 // Called when the game starts or when spawned
@@ -86,53 +91,21 @@ void ABaseInformant::BeginPlay()
 		RecorderComponent->SubmixToRecord = dynamic_cast<USoundSubmix*>(AudioCapture->SoundSubmix);
 	}
 
-	//Create wav file for debug
-	/*struct WAVHEADER
-	{
-		int chunkId = 0x52494646;
-		int chunkSize = 0;
-		int format = 0x57415645;
-		int subchunk1Id = 0x666d7420;
-		int subchunk1Size = 16;
-		uint16 audioFormat = 1;
-		uint16 numChannels = 1;
-		int sampleRate = 48000;
-		int byteRate = 96000;
-		uint16 blockAlign = 2;
-		uint16 bitsPerSample = 16;
-		int subchunk2Id = 0x64617461;
-		int subchunk2Size = 0;
-	};
-	WAVHEADER header;
-	TArray64<uint8_t> arr((uint8_t*)&header, sizeof(header));
-	FFileHelper::SaveArrayToFile(arr, TEXT("aud.wav"));*/
-
 	RecorderComponent->OnRecorded = [this](const int16* AudioData, int NumChannels, int NumSamples, int SampleRate)
-	{
-		if (auto GM = GetWorld()->GetAuthGameMode<AVRGameModeWithSciViBase>())
-		{
-			/*TArray64<uint8_t> arr((uint8_t*)AudioData, NumSamples * sizeof(int16));
-			FFileHelper::SaveArrayToFile(arr, TEXT("aud.wav"));*/
-			auto b64pcm = FBase64::Encode((uint8_t*)AudioData, NumSamples * sizeof(int16));
-			auto json = FString::Printf(TEXT("\"WAV\": {\"SampleRate\": %i,"
-				"\"PCM\": \"data:audio/wav;base64,%s\"}"), SampleRate, *b64pcm);
-			GM->SendToSciVi(json);
-		}
-	};
-	RecorderComponent->OnRecordFinished = [this]()
-	{
-		if (auto GM = GetWorld()->GetAuthGameMode<AVRGameModeWithSciViBase>())
-		{
-			auto json = FString::Printf(TEXT("\"WAV\": \"End\""));
-			GM->SendToSciVi(json);
-		}
-	};
-	AudioCapture->Activate();
-	FloorHeight = GetActorLocation().Z - (RootComponent->CalcLocalBounds().BoxExtent.Z);
+	{OnRecordBatch(AudioData, NumChannels, NumSamples, SampleRate); };
+	RecorderComponent->OnRecordFinished = [this] {OnFinishRecord(); };
 
+	FloorHeight = GetActorLocation().Z - (RootComponent->CalcLocalBounds().BoxExtent.Z);
+	player = NewObject<UMediaPlayer>(MediaSound);
+	MediaSound->SetMediaPlayer(player);
 	auto GM = GetWorld()->GetAuthGameMode<AVRGameModeBase>();
 	if (GM)
 		GM->NotifyInformantSpawned(this);
+}
+
+void ABaseInformant::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	Super::EndPlay(EndPlayReason);
 }
 
 // Called every frame
@@ -215,6 +188,14 @@ void ABaseInformant::Tick(float DeltaTime)
 				newPosition = GetActorLocation();
 		}
 
+		if (IsValid(DraggedActor_RHand) || IsValid(DraggedActor_RHand))
+		{
+			DragDistance += DeltaDragDistance;
+			if (DragDistance > MaxDragDistance)
+				DragDistance = MaxDragDistance;
+			if (DragDistance < 0.0f)
+				DragDistance = 0.0f;
+		}
 		//Process Drag&Drop with right hand
 		if (IsValid(DraggedActor_RHand))
 		{
@@ -270,26 +251,30 @@ void ABaseInformant::Tick(float DeltaTime)
 void ABaseInformant::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
 	Super::SetupPlayerInputComponent(PlayerInputComponent);
-	InputComponent->BindAction("RController_Trigger", IE_Pressed, this, &ABaseInformant::OnRTriggerPressed);
-	InputComponent->BindAction("RController_Trigger", IE_Released, this, &ABaseInformant::OnRTriggerReleased);
-	InputComponent->BindAction("LController_Trigger", IE_Pressed, this, &ABaseInformant::OnLTriggerPressed);
-	InputComponent->BindAction("LController_Trigger", IE_Released, this, &ABaseInformant::OnLTriggerReleased);
-	InputComponent->BindAction("Walking", IE_Pressed, this, &ABaseInformant::Walking_Trajectory);
-	InputComponent->BindAction("Walking", IE_Released, this, &ABaseInformant::Walking_Teleport);
-	InputComponent->BindAction("RController_Grip", IE_Pressed, this, &ABaseInformant::DragActor_RHand);
-	InputComponent->BindAction("RController_Grip", IE_Released, this, &ABaseInformant::DropActor_RHand);
-	InputComponent->BindAction("LController_Grip", IE_Pressed, this, &ABaseInformant::DragActor_LHand);
-	InputComponent->BindAction("LController_Grip", IE_Released, this, &ABaseInformant::DropActor_LHand);
-	InputComponent->BindAction("Quit", IE_Pressed, this, &ABaseInformant::QuitGame);
+	InputComponent->BindAction(FName(TEXT("RController_Trigger")), IE_Pressed, this, &ABaseInformant::OnRTriggerPressed);
+	InputComponent->BindAction(FName(TEXT("RController_Trigger")), IE_Released, this, &ABaseInformant::OnRTriggerReleased);
+	InputComponent->BindAction(FName(TEXT("LController_Trigger")), IE_Pressed, this, &ABaseInformant::OnLTriggerPressed);
+	InputComponent->BindAction(FName(TEXT("LController_Trigger")), IE_Released, this, &ABaseInformant::OnLTriggerReleased);
+	InputComponent->BindAction(FName(TEXT("Walking")), IE_Pressed, this, &ABaseInformant::Walking_Trajectory);
+	InputComponent->BindAction(FName(TEXT("Walking")), IE_Released, this, &ABaseInformant::Walking_Teleport);
+	InputComponent->BindAction(FName(TEXT("RController_Grip")), IE_Pressed, this, &ABaseInformant::DragActor_RHand);
+	InputComponent->BindAction(FName(TEXT("RController_Grip")), IE_Released, this, &ABaseInformant::DropActor_RHand);
+	InputComponent->BindAction(FName(TEXT("LController_Grip")), IE_Pressed, this, &ABaseInformant::DragActor_LHand);
+	InputComponent->BindAction(FName(TEXT("LController_Grip")), IE_Released, this, &ABaseInformant::DropActor_LHand);
+	InputComponent->BindAction(FName(TEXT("Quit")), IE_Pressed, this, &ABaseInformant::QuitGame);
+	InputComponent->BindAction(FName(TEXT("DragObject_MoveNear")), IE_Pressed, this, &ABaseInformant::DraggedObjectMoveNear);
+	InputComponent->BindAction(FName(TEXT("DragObject_MoveNear")), IE_Released, this, &ABaseInformant::DraggedObjectStop);
+	InputComponent->BindAction(FName(TEXT("DragObject_MoveFar")), IE_Pressed, this, &ABaseInformant::DraggedObjectMoveFar);
+	InputComponent->BindAction(FName(TEXT("DragObject_MoveFar")), IE_Released, this, &ABaseInformant::DraggedObjectStop);
 	if (bUseMouseControlling) {
-		InputComponent->BindAxis("CameraMove_RightLeft", this, &ABaseInformant::CameraMove_LeftRight);
-		InputComponent->BindAxis("CameraMove_UpDown", this, &ABaseInformant::CameraMove_UpDown);
+		InputComponent->BindAxis(FName(TEXT("CameraMove_RightLeft")), this, &ABaseInformant::CameraMove_LeftRight);
+		InputComponent->BindAxis(FName(TEXT("CameraMove_UpDown")), this, &ABaseInformant::CameraMove_UpDown);
 	}
 }
 
 //------------------- Input Events ----------------------
 
-void ABaseInformant::OnExperimentStarted()
+void ABaseInformant::OnExperimentStarted(const FString& InformantName)
 {
 	OnExperimentStarted_BP();
 }
@@ -316,7 +301,7 @@ void ABaseInformant::OnRTriggerPressed()
 				actor->OnPressedByTrigger(hitPoint);
 		}
 	}
-
+	OnRTriggerPressed_BP();
 	//start event of clicking
 	FKey LMB(TEXT("LeftMouseButton"));
 	MC_Right_Interaction_Lazer->PressPointerKey(LMB);
@@ -339,6 +324,7 @@ void ABaseInformant::OnRTriggerReleased()
 				actor->OnReleasedByTrigger(hitPoint);
 		}
 	}
+	OnRTriggerReleased_BP();
 	//start event of clicking
 	FKey LMB(TEXT("LeftMouseButton"));
 	MC_Right_Interaction_Lazer->ReleasePointerKey(LMB);
@@ -372,24 +358,30 @@ void ABaseInformant::DragActor_RHand()
 		GetGaze(gaze);
 		auto GM = GetWorld()->GetAuthGameMode<AVRGameModeBase>();
 		FVector trigger_ray = MC_Right->GetComponentLocation() +
-			MC_Right->GetForwardVector() * DragDistance;
+			MC_Right->GetForwardVector() * MaxDragDistance;
 		FHitResult hitPoint(ForceInit);
 		if (GM->RayTrace(this, MC_Right->GetComponentLocation(), trigger_ray, hitPoint))
 		{
 			auto actor = Cast<AInteractableActor>(hitPoint.Actor);
 			if (IsValid(actor) && actor->bIsDraggable) {
 				DraggedActor_RHand = actor;
+				DragDistance = hitPoint.Distance;
 				DraggedActor_RHand->OnDrag();
 			}
 		}
 	}
+	DragActor_RHand_BP();
+	DraggedObjectStop();
 }
 
 void ABaseInformant::DropActor_RHand()
 {
+	DropActor_RHand_BP();
 	if (IsValid(DraggedActor_RHand))
 		DraggedActor_RHand->OnDrop();
 	DraggedActor_RHand = nullptr;
+	DragDistance = -1.0f;
+	DraggedObjectStop();
 }
 
 void ABaseInformant::DragActor_LHand()
@@ -411,13 +403,35 @@ void ABaseInformant::DragActor_LHand()
 			}
 		}
 	}
+	DragActor_LHand_BP();
+	DraggedObjectStop();
 }
 
 void ABaseInformant::DropActor_LHand()
 {
+	DropActor_LHand_BP();
 	if (IsValid(DraggedActor_LHand))
 		DraggedActor_LHand->OnDrop();
 	DraggedActor_LHand = nullptr;
+	DragDistance = -1.0f;
+	DraggedObjectStop();
+}
+
+void ABaseInformant::DraggedObjectMoveFar()
+{
+	if (IsValid(DraggedActor_RHand) || IsValid(DraggedActor_RHand))
+		DeltaDragDistance = 1.0f;
+}
+
+void ABaseInformant::DraggedObjectMoveNear()
+{
+	if (IsValid(DraggedActor_RHand) || IsValid(DraggedActor_RHand))
+		DeltaDragDistance = -1.0f;
+}
+
+void ABaseInformant::DraggedObjectStop()
+{
+	DeltaDragDistance = 0.0f;
 }
 
 void ABaseInformant::Walking_Trajectory()
@@ -518,19 +532,61 @@ void ABaseInformant::GetGaze(FGaze& gaze) const
 	//here you can insert custom calibration
 }
 
-void ABaseInformant::StartRecording()
-{
-	RecorderComponent->StartRecording();
-}
-
-void ABaseInformant::StopRecording()
-{
-	RecorderComponent->StopRecording();
-}
-
 bool ABaseInformant::IsRecording() const
 {
 	return RecorderComponent->IsRecording();
+}
+
+void ABaseInformant::PlaySound(const FString& path)
+{
+	if (!IsValid(MediaSound) || !IsValid(MediaSound->GetMediaPlayer()))
+	{
+		UE_LOG(LogAudio, Error, TEXT("MediaSound Component hasn't media player set"));
+		return;
+	}
+	if (playing_sound != path) // starts new file
+	{
+		playing_sound = path;
+		MediaSound->GetMediaPlayer()->OpenFile(playing_sound);
+		if (auto GM = GetWorld()->GetAuthGameMode<AVRGameModeBase>())
+		{
+			auto csv = FString::Printf(TEXT("PlayAudioDescription;%s\n"), *path);
+			GM->WriteToExperimentLog(ExperimentLogType::Events, csv);
+			if (auto GM_with_scivi = GetWorld()->GetAuthGameMode<AVRGameModeWithSciViBase>())
+			{
+				auto json = FString::Printf(TEXT("\"PlayAudioDescription\": \"%s\""), *path);
+				GM_with_scivi->SendToSciVi(json);
+			}
+		}
+	}
+	MediaSound->GetMediaPlayer()->Play();
+}
+
+void ABaseInformant::StopSound()
+{
+	if (!IsValid(MediaSound) || !IsValid(MediaSound->GetMediaPlayer()))
+	{
+		UE_LOG(LogAudio, Error, TEXT("MediaSound Component hasn't media player set"));
+		return;
+	}
+	MediaSound->GetMediaPlayer()->Pause();
+	if (auto GM = GetWorld()->GetAuthGameMode<AVRGameModeBase>())
+	{
+		auto csv = FString::Printf(TEXT("StopAudioDescription;%s\n"), *playing_sound);
+		GM->WriteToExperimentLog(ExperimentLogType::Events, csv);
+		if (auto GM_with_scivi = GetWorld()->GetAuthGameMode<AVRGameModeWithSciViBase>())
+		{
+			auto json = FString::Printf(TEXT("\"StopAudioDescription\": \"%s\""), *playing_sound);
+			GM_with_scivi->SendToSciVi(json);
+		}
+	}
+	playing_sound.Empty();
+}
+
+
+bool ABaseInformant::IsSoundPlaying() const
+{
+	return IsValid(MediaSound) && IsValid(MediaSound->GetMediaPlayer()) && MediaSound->GetMediaPlayer()->IsPlaying();
 }
 
 void ABaseInformant::EnableInputEvents(bool enable)

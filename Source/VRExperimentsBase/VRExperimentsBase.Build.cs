@@ -14,8 +14,8 @@ public class VRExperimentsBase : ModuleRules
 				
 			}
 			);
-				
-		
+
+		Definitions.Add("_USE_SCIVI_CONNECTION_");
 		PrivateIncludePaths.AddRange(
 			new string[] {
 				"ThirdPartyLibs",
@@ -34,7 +34,7 @@ public class VRExperimentsBase : ModuleRules
 				"UMG", "Slate", "SlateCore",
 				"SRanipal", "SRanipalEye","HeadMountedDisplay",
 				"AudioCapture", "SignalProcessing",
-				"BlueprintJson"
+				"BlueprintJson", "MediaAssets"
 				// ... add other public dependencies that you statically link with here ...
 			}
 			);

@@ -17,6 +17,8 @@ struct VREXPERIMENTSBASE_API FGaze
 	UPROPERTY()
 	FVector direction;
 	UPROPERTY()
+	FVector target;
+	UPROPERTY()
 	float left_pupil_diameter_mm = 0.0f;
 	UPROPERTY()
 	float left_pupil_openness = 0.0f;
@@ -38,6 +40,7 @@ public:
 	ABaseInformant();
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 	// Called to bind functionality to input
@@ -48,11 +51,21 @@ public:
 	UFUNCTION(BlueprintCallable)
 	void SetVisibility_MC_Left(bool visibility);
 	void GetGaze(FGaze& gaze) const;
-	UFUNCTION()
-	void StartRecording();
-	UFUNCTION()
-	void StopRecording();
 	bool IsRecording() const;
+protected:
+	virtual void OnRecordBatch(const int16* AudioData, int NumChannels, int NumSamples, int SampleRate) {}
+	virtual void OnFinishRecord() {}
+	virtual void OnStartRecord() {}
+
+	UPROPERTY()
+	class UMediaPlayer* player;
+public:
+	UFUNCTION(BlueprintCallable)
+	void PlaySound(const FString& path);
+	UFUNCTION(BlueprintCallable)
+	void StopSound();
+	UFUNCTION(BlueprintCallable)
+	bool IsSoundPlaying() const;
 
 	UFUNCTION(BlueprintCallable)
 	virtual void EnableInputEvents(bool enable);
@@ -97,12 +110,16 @@ public:
 	class USubmixRecorder* RecorderComponent;
 
 	UPROPERTY(EditAnywhere, BlueprintReadonly)
+	class UMediaSoundComponent* MediaSound;
+
+	UPROPERTY(EditAnywhere, BlueprintReadonly)
 	UHapticFeedbackEffect_Base* VibrationEffect;
 
-	virtual void OnExperimentStarted();
+	virtual void OnExperimentStarted(const FString& InformantName);
 	virtual void OnExperimentFinished();
 
 protected:
+	FString playing_sound;
 	bool bIsInputEventsEnabled = true;
 	UPROPERTY(EditAnywhere, BlueprintReadonly)
 	class USphereComponent* InteractionCollider;
@@ -111,28 +128,49 @@ protected:
 	UFUNCTION(BlueprintImplementableEvent, meta = (DisplayName = "OnExperimentFinished"))
 	void OnExperimentFinished_BP();
 
+	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable, Category="Input")
+	void OnRTriggerPressed_BP();
 	UFUNCTION()
-	void OnRTriggerPressed();
+	virtual void OnRTriggerPressed();
+	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable, Category = "Input")
+	void OnRTriggerReleased_BP();
 	UFUNCTION()
-	void OnRTriggerReleased();
+	virtual void OnRTriggerReleased();
+	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable, Category = "Input")
+	void OnLTriggerPressed_BP();
 	UFUNCTION()
-	void OnLTriggerPressed();
+	virtual void OnLTriggerPressed();
+	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable, Category = "Input")
+	void OnLTriggerReleased_BP();
 	UFUNCTION()
-	void OnLTriggerReleased();
-	UFUNCTION()
+	virtual void OnLTriggerReleased();
 	void CameraMove_LeftRight(float value);
-	UFUNCTION()
 	void CameraMove_UpDown(float value);
+	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable, Category = "Input")
+	void DragActor_RHand_BP();
 	UFUNCTION()
-	void DragActor_RHand();
+	virtual void DragActor_RHand();
+	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable, Category = "Input")
+	void DropActor_RHand_BP();
 	UFUNCTION()
-	void DropActor_RHand();
+	virtual void DropActor_RHand();
+	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable, Category = "Input")
+	void DragActor_LHand_BP();
 	UFUNCTION()
-	void DragActor_LHand();
+	virtual void DragActor_LHand();
+	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable, Category = "Input")
+	void DropActor_LHand_BP();
 	UFUNCTION()
-	void DropActor_LHand();
+	virtual void DropActor_LHand();
 	float Yaw;
 	float CameraPitch;
+	UFUNCTION()
+	void DraggedObjectMoveFar();
+	UFUNCTION()
+	void DraggedObjectMoveNear();
+	UFUNCTION()
+	void DraggedObjectStop();
+
 	//------------ Walking -----------------
 	UFUNCTION()
 	void Walking_Trajectory();
@@ -147,7 +185,9 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadonly)
 	float InteractionDistance = 1000.0f;
 	UPROPERTY(VisibleAnywhere, BlueprintReadonly)
-	float DragDistance = 50.0f;
+	float MaxDragDistance = 500.0f;
+	float DragDistance = -1.0f;
+	float DeltaDragDistance = 0.0f;
 protected:
 	TSet<AActor*> close_actors;
 	class AInteractableActor* eye_tracked_actor = nullptr;

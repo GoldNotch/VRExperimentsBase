@@ -83,7 +83,8 @@ void AVRGameModeBase::EndPlay(const EEndPlayReason::Type EndPlayReason)
 	Super::EndPlay(EndPlayReason);
 	SRanipalEye_Framework::Instance()->StopFramework();
 	FinishExperiment(0, TEXT("QuitGame"));
-	ControlPanel->RequestDestroyWindow();
+	if (ControlPanel.IsValid())
+		ControlPanel->RequestDestroyWindow();
 	ControlPanel.Reset();
 }
 
@@ -112,76 +113,90 @@ bool AVRGameModeBase::RayTrace(const AActor* ignoreActor, const FVector& origin,
 	}
 }
 
-void AVRGameModeBase::StartExperiment(bool recording/* = true*/, FString InformantName/* = FString()*/)
+void AVRGameModeBase::StartExperiment(bool recording/* = true*/, FString _InformantName/* = FString()*/)
 {
-	bExperimentStarting = false;
-	bExperimentRunning = true;
-	if (HasExperimentSteps())
-		NextExperimentStep();
-	if (InformantName.IsEmpty()) 
+	check(!IsExperimentStarted());
+	if (_InformantName.IsEmpty())
 	{
-		InformantName = TEXT("Informant_");
-		InformantName += FGuid::NewGuid().ToString();
+		_InformantName = TEXT("Informant_") + FGuid::NewGuid().ToString();
 	}
+	InformantName = _InformantName;
 	// generate record files
 	bRecordLogs = recording;
-	if (bRecordLogs)
-	{
-		FString now = FDateTime::Now().ToString();
-		FString full_dir_path = FPaths::ProjectDir() + TEXT("/") + ExperimentLogsFolderPath;
-		IPlatformFile& FileManager = FPlatformFileManager::Get().GetPlatformFile();
-		if (!FileManager.DirectoryExists(*full_dir_path))
-			if (!FileManager.CreateDirectory(*full_dir_path))
-				UE_LOG(LogLoad, Error, TEXT("Directory wasn't created"));
-		for (size_t i = 0; i < ExperimentLogType::Total; ++i)
-		{
-			logs[i].SetPath(FString::Printf(TEXT("%s/%s_%s_%s.csv"), *full_dir_path, *now, *logs[i].filename, *InformantName));
-			// format header
-			FString header_row = TEXT("");
-			for (size_t j = 0, c = logs[i].header.Num(); j < c; ++j)
-			{
-				header_row += logs[i].header[j];
-				if (j < c - 1) header_row += LogColumnSeparator;
-			}
-			header_row += TEXT("\n");
-			logs[i].AppendRow(header_row);
-		}
-	}
 
-	OnExperimentStarted();
-	for (TActorIterator<AInteractableActor> It(GetWorld(), AInteractableActor::StaticClass()); It; ++It)
-		It->OnExperimentStarted();
-	for (TActorIterator<ABaseInformant> It(GetWorld(), ABaseInformant::StaticClass()); It; ++It)
-		It->OnExperimentStarted();
+	if (IsInGameThread()) {
+		bExperimentStarting = false;
+		bExperimentRunning = true;
+		CurrentExpeirmentStepIndex = -1;
+		if (HasExperimentSteps())
+			NextExperimentStep();
+		UE_LOG(LogExperiment, Display, TEXT("Experiment started"));
+		if (bRecordLogs)
+		{
+			FString now = FDateTime::Now().ToString();
+			FString full_dir_path = FPaths::ProjectDir() + TEXT("/") + ExperimentLogsFolderPath;
+			auto& platformFile = FPlatformFileManager::Get().GetPlatformFile();
+			if (!platformFile.DirectoryExists(*full_dir_path))
+				if (!platformFile.CreateDirectory(*full_dir_path))
+					UE_LOG(LogLoad, Error, TEXT("Directory wasn't created"));
+			for (size_t i = 0; i < ExperimentLogType::Total; ++i)
+			{
+				logs[i].SetPath(FString::Printf(TEXT("%s/%s_%s_%s.csv"), *full_dir_path, *now, *logs[i].filename, *InformantName));
+				// format header
+				FString header_row = TEXT("");
+				for (size_t j = 0, c = logs[i].header.Num(); j < c; ++j)
+				{
+					header_row += logs[i].header[j];
+					if (j < c - 1) header_row += LogColumnSeparator;
+				}
+				header_row += TEXT("\n");
+				logs[i].AppendRow(header_row);
+			}
+		}
+
+		OnExperimentStarted(InformantName);
+		for (TActorIterator<AInteractableActor> It(GetWorld(), AInteractableActor::StaticClass()); It; ++It)
+			It->OnExperimentStarted();
+		for (TActorIterator<ABaseInformant> It(GetWorld(), ABaseInformant::StaticClass()); It; ++It)
+			It->OnExperimentStarted(InformantName);
+	}
+	else
+		bExperimentStarting = true;
 }
 
 void AVRGameModeBase::FinishExperiment(int code, const FString& message)
 {
-	bExperimentFinishing = false;
-	bExperimentRunning = false;
-	CurrentExpeirmentStepIndex = -1;
-	bRecordLogs = false;
-	for (auto&& log : logs)
-		log.Flush();
-	OnExperimentFinished(code, message);
-	for (TActorIterator<AInteractableActor> It(GetWorld(), AInteractableActor::StaticClass()); It; ++It)
-		It->OnExperimentFinished();
-	for (TActorIterator<ABaseInformant> It(GetWorld(), ABaseInformant::StaticClass()); It; ++It)
-		It->OnExperimentFinished();
-}
-
-void AVRGameModeBase::NextExperimentStep()
-{
-	if (CurrentExpeirmentStepIndex >= ExperimentSteps.Num() - 1)
-		FinishExperiment(0, TEXT("Experiment is over due to all steps are passed"));
-	else
-	{
+	check(IsExperimentStarted());
+	if (IsInGameThread()) {
 		if (IsValid(CurrentExperimentStep)) {
 			GetWorld()->RemoveActor(CurrentExperimentStep, true);
 			CurrentExperimentStep->Destroy();//it calls end play and quit step
 		}
-		CurrentExpeirmentStepIndex++;
-		auto& step_class = ExperimentSteps[CurrentExpeirmentStepIndex];
+		bExperimentFinishing = false;
+		bExperimentRunning = false;
+		CurrentExpeirmentStepIndex = -1;
+		bRecordLogs = false;
+		for (auto&& log : logs)
+			log.Flush();
+		OnExperimentFinished(code, message);
+		for (TActorIterator<AInteractableActor> It(GetWorld(), AInteractableActor::StaticClass()); It; ++It)
+			It->OnExperimentFinished();
+		for (TActorIterator<ABaseInformant> It(GetWorld(), ABaseInformant::StaticClass()); It; ++It)
+			It->OnExperimentFinished();
+	}
+	else bExperimentFinishing = true;
+}
+
+void AVRGameModeBase::NextExperimentStep()
+{
+	check(IsExperimentStarted());
+	if (IsValid(CurrentExperimentStep)) {
+		GetWorld()->RemoveActor(CurrentExperimentStep, true);
+		CurrentExperimentStep->Destroy();//it calls end play and quit step
+	}
+	if (ExperimentSteps.IsValidIndex(CurrentExpeirmentStepIndex + 1))
+	{
+		auto& step_class = ExperimentSteps[++CurrentExpeirmentStepIndex];
 		FActorSpawnParameters params;
 		params.NameMode = FActorSpawnParameters::ESpawnActorNameMode::Requested;
 		params.Name = FName(FString::Printf(TEXT("ExperimentStep_%i"), CurrentExpeirmentStepIndex));
@@ -191,14 +206,15 @@ void AVRGameModeBase::NextExperimentStep()
 
 void AVRGameModeBase::PrevExperimentStep()
 {
-	if (CurrentExpeirmentStepIndex > 0)
+	check(IsExperimentStarted());
+	if (IsValid(CurrentExperimentStep))
 	{
-		if (IsValid(CurrentExperimentStep)) {
-			GetWorld()->RemoveActor(CurrentExperimentStep, true);
-			CurrentExperimentStep->Destroy();//it calls end play and quit step
-		}
-		CurrentExpeirmentStepIndex--;
-		auto& step_class = ExperimentSteps[CurrentExpeirmentStepIndex];
+		GetWorld()->RemoveActor(CurrentExperimentStep, true);
+		CurrentExperimentStep->Destroy();//it calls end play and quit step
+	}
+	if (ExperimentSteps.IsValidIndex(CurrentExpeirmentStepIndex - 1))
+	{
+		auto& step_class = ExperimentSteps[--CurrentExpeirmentStepIndex];
 		FActorSpawnParameters params;
 		params.NameMode = FActorSpawnParameters::ESpawnActorNameMode::Requested;
 		params.Name = FName(FString::Printf(TEXT("ExperimentStep_%i"), CurrentExpeirmentStepIndex));
@@ -206,9 +222,9 @@ void AVRGameModeBase::PrevExperimentStep()
 	}
 }
 
-void AVRGameModeBase::OnExperimentStarted()
+void AVRGameModeBase::OnExperimentStarted(const FString& _InformantName)
 {
-	OnExperimentStarted_BP();
+	OnExperimentStarted_BP(_InformantName);
 }
 
 void AVRGameModeBase::OnExperimentFinished(int code, const FString& message)
@@ -228,7 +244,7 @@ void AVRGameModeBase::WriteToExperimentLog(ExperimentLogType log_type, const FSt
 {
 	if (bExperimentRunning && bRecordLogs)
 	{
-		logs[log_type].AppendRow(row);
+		logs[log_type].AppendRow(FString::Printf(TEXT("%lli;%s"), GetLogTimestamp(), *row));
 	}
 }
 
@@ -242,7 +258,7 @@ void FExperimentLog::AppendRow(const FString& row)
 
 void FExperimentLog::Flush()
 {
-	FFileHelper::SaveStringToFile(rows, *path, FFileHelper::EEncodingOptions::ForceUTF8, & IFileManager::Get(), FILEWRITE_Append);
+	FFileHelper::SaveStringToFile(rows, *path, FFileHelper::EEncodingOptions::ForceUTF8, &IFileManager::Get(), FILEWRITE_Append);
 	rows_to_write_count = 0;
 	rows.Reset();
 }
