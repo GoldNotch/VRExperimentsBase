@@ -82,6 +82,7 @@ void AVRGameModeBase::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
 	Super::EndPlay(EndPlayReason);
 	SRanipalEye_Framework::Instance()->StopFramework();
+	if (IsExperimentStarted())
 	FinishExperiment(0, TEXT("QuitGame"));
 	if (ControlPanel.IsValid())
 		ControlPanel->RequestDestroyWindow();
