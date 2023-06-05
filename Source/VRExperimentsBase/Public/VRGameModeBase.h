@@ -62,6 +62,8 @@ public:
 	virtual void NotifyInformantSpawned(class ABaseInformant* _informant);
 	UFUNCTION(BlueprintCallable)
 	bool RayTrace(const AActor* ignoreActor, const FVector& origin, const FVector& end, FHitResult& hitResult);
+	UFUNCTION(BlueprintCallable, Category="Debug")
+	void PrintCallstack() const;
 	
 	UFUNCTION(BlueprintCallable, Category = "Experiment")
 	void StartExperiment(bool recording = true, FString _InformantName = TEXT(""));

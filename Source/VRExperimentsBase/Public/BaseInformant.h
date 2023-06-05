@@ -12,21 +12,21 @@ USTRUCT(BlueprintType)
 struct VREXPERIMENTSBASE_API FGaze
 {
 	GENERATED_BODY()
-	UPROPERTY()
+	UPROPERTY(BlueprintReadonly, VisibleAnywhere)
 	FVector origin;
-	UPROPERTY()
+	UPROPERTY(BlueprintReadonly, VisibleAnywhere)
 	FVector direction;
-	UPROPERTY()
+	UPROPERTY(BlueprintReadonly, VisibleAnywhere)
 	FVector target;
-	UPROPERTY()
+	UPROPERTY(BlueprintReadonly, VisibleAnywhere)
 	float left_pupil_diameter_mm = 0.0f;
-	UPROPERTY()
+	UPROPERTY(BlueprintReadonly, VisibleAnywhere)
 	float left_pupil_openness = 0.0f;
-	UPROPERTY()
+	UPROPERTY(BlueprintReadonly, VisibleAnywhere)
 	float right_pupil_diameter_mm = 0.0f;
-	UPROPERTY()
+	UPROPERTY(BlueprintReadonly, VisibleAnywhere)
 	float right_pupil_openness = 0.0f;
-	UPROPERTY()
+	UPROPERTY(BlueprintReadonly, VisibleAnywhere)
 	float cf = 0.0f;
 };
 

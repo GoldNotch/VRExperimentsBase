@@ -113,6 +113,12 @@ bool AVRGameModeBase::RayTrace(const AActor* ignoreActor, const FVector& origin,
 	}
 }
 
+void AVRGameModeBase::PrintCallstack() const
+{
+	PrintScriptCallstack();
+	FDebug::DumpStackTraceToLog(ELogVerbosity::Display);
+}
+
 void AVRGameModeBase::StartExperiment(bool recording/* = true*/, FString _InformantName/* = FString()*/)
 {
 	check(!IsExperimentStarted());
@@ -244,7 +250,7 @@ void AVRGameModeBase::WriteToExperimentLog(ExperimentLogType log_type, const FSt
 {
 	if (bExperimentRunning && bRecordLogs)
 	{
-		logs[log_type].AppendRow(FString::Printf(TEXT("%lli;%s"), GetLogTimestamp(), *row));
+		logs[log_type].AppendRow(FString::Printf(TEXT("%lli;%s\n"), GetLogTimestamp(), *row));
 	}
 }
 
