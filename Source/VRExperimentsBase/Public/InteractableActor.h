@@ -37,8 +37,8 @@ public:
 	virtual void OnPressedByTrigger(const FHitResult& hitResult);
 	virtual void OnReleasedByTrigger(const FHitResult& hitResult);
 	//eye track interaction
-	virtual void BeginOverlapByEyeTrack(const FGaze& gaze, const FHitResult& hitResult);
-	virtual void ProcessEyeTrack(const FGaze& gaze, const FHitResult& hitResult);
+	virtual void BeginOverlapByEyeTrack(const FGaze& gaze);
+	virtual void ProcessEyeTrack(const FGaze& gaze);
 	virtual void EndOverlapByEyeTrack();
 	//controller interaction
 	virtual void BeginOverlapByController(const FHitResult& hitResult);
@@ -59,9 +59,9 @@ protected:
 	void OnExperimentFinished_BP();
 
 	UFUNCTION(BlueprintImplementableEvent, meta = (DisplayName = "HadEyeFocus"))
-	void BeginOverlapByEyeTrack_BP(const FGaze& gaze, const FHitResult& hitResult);
+	void BeginOverlapByEyeTrack_BP(const FGaze& gaze);
 	UFUNCTION(BlueprintImplementableEvent, meta = (DisplayName = "EyeTrackTick"))
-	void ProcessEyeTrack_BP(const FGaze& gaze, const FHitResult& hitResult);
+	void ProcessEyeTrack_BP(const FGaze& gaze);
 	UFUNCTION(BlueprintImplementableEvent, meta = (DisplayName = "LostEyeFocus"))
 	void EndOverlapByEyeTrack_BP();
 

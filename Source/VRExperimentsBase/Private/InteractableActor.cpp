@@ -27,14 +27,14 @@ void AInteractableActor::Tick(float DeltaTime)
 
 //-------------------- Events -------------------
 
-void AInteractableActor::BeginOverlapByEyeTrack(const FGaze& gaze, const FHitResult& hitResult)
+void AInteractableActor::BeginOverlapByEyeTrack(const FGaze& gaze)
 {
-	BeginOverlapByEyeTrack_BP(gaze, hitResult);
+	BeginOverlapByEyeTrack_BP(gaze);
 }
 
-void AInteractableActor::ProcessEyeTrack(const FGaze& gaze, const FHitResult& hitResult)
+void AInteractableActor::ProcessEyeTrack(const FGaze& gaze)
 {
-	ProcessEyeTrack_BP(gaze, hitResult);
+	ProcessEyeTrack_BP(gaze);
 	//WriteGazeEverywhere(gaze, hitResult);
 }
 

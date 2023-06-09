@@ -116,22 +116,20 @@ void ABaseInformant::Tick(float DeltaTime)
 	//check gaze overlaps
 	{
 		FGaze gaze;
-		FHitResult hitPoint(ForceInit);
 		GetGaze(gaze);
 		EyeTrackingArrow->SetWorldLocationAndRotation(gaze.origin, gaze.direction.Rotation());
-		auto end = gaze.origin + gaze.direction * InteractionDistance;
-		if (GM->RayTrace(this, gaze.origin, end, hitPoint))
+		if (gaze.IsLookingOnActor())
 		{
-			if (hitPoint.Actor != eye_tracked_actor)
+			if (gaze.target.Actor != eye_tracked_actor)
 			{
 				if (IsValid(eye_tracked_actor))
 					eye_tracked_actor->EndOverlapByEyeTrack();
-				eye_tracked_actor = Cast<AInteractableActor>(hitPoint.Actor);
+				eye_tracked_actor = Cast<AInteractableActor>(gaze.target.Actor);
 				if (IsValid(eye_tracked_actor))
-					eye_tracked_actor->BeginOverlapByEyeTrack(gaze, hitPoint);
+					eye_tracked_actor->BeginOverlapByEyeTrack(gaze);
 			}
 			if (IsValid(eye_tracked_actor))
-				eye_tracked_actor->ProcessEyeTrack(gaze, hitPoint);
+				eye_tracked_actor->ProcessEyeTrack(gaze);
 		}
 		else
 		{
@@ -530,6 +528,9 @@ void ABaseInformant::GetGaze(FGaze& gaze) const
 	gaze.right_pupil_diameter_mm = vd.right.pupil_diameter_mm;
 	gaze.right_pupil_openness = vd.right.eye_openness;
 	//here you can insert custom calibration
+	auto GM = GetWorld()->GetAuthGameMode<AVRGameModeBase>();
+	auto end = MC_Right->GetComponentLocation() + MC_Right->GetForwardVector() * InteractionDistance;
+	GM->RayTrace(this, MC_Right->GetComponentLocation(), end, gaze.target);
 }
 
 bool ABaseInformant::IsRecording() const

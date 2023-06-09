@@ -17,7 +17,7 @@ struct VREXPERIMENTSBASE_API FGaze
 	UPROPERTY(BlueprintReadonly, VisibleAnywhere)
 	FVector direction;
 	UPROPERTY(BlueprintReadonly, VisibleAnywhere)
-	FVector target;
+	FHitResult target {ForceInit};
 	UPROPERTY(BlueprintReadonly, VisibleAnywhere)
 	float left_pupil_diameter_mm = 0.0f;
 	UPROPERTY(BlueprintReadonly, VisibleAnywhere)
@@ -28,6 +28,8 @@ struct VREXPERIMENTSBASE_API FGaze
 	float right_pupil_openness = 0.0f;
 	UPROPERTY(BlueprintReadonly, VisibleAnywhere)
 	float cf = 0.0f;
+
+	FORCEINLINE bool IsLookingOnActor() const { return target.bBlockingHit; }
 };
 
 UCLASS()
