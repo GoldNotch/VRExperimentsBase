@@ -529,8 +529,7 @@ void ABaseInformant::GetGaze(FGaze& gaze) const
 	gaze.right_pupil_openness = vd.right.eye_openness;
 	//here you can insert custom calibration
 	auto GM = GetWorld()->GetAuthGameMode<AVRGameModeBase>();
-	auto end = MC_Right->GetComponentLocation() + MC_Right->GetForwardVector() * InteractionDistance;
-	GM->RayTrace(this, MC_Right->GetComponentLocation(), end, gaze.target);
+	GM->RayTrace(this, gaze.origin, gaze.origin + gaze.direction * InteractionDistance, gaze.target);
 }
 
 bool ABaseInformant::IsRecording() const
