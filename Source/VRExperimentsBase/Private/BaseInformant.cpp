@@ -520,7 +520,7 @@ void ABaseInformant::GetGaze(FGaze& gaze) const
 	FRotator HMD_orient;
 	FVector HMD_pos;
 	UHeadMountedDisplayFunctionLibrary::GetOrientationAndPosition(HMD_orient, HMD_pos);
-
+	//Collect Data from HTC Vive
 	gaze.origin = GetTransform().TransformPosition(HMD_pos);
 	gaze.direction = GetTransform().TransformVector(HMD_orient.RotateVector(gaze.direction));
 	gaze.left_pupil_diameter_mm = vd.left.pupil_diameter_mm;
@@ -528,6 +528,7 @@ void ABaseInformant::GetGaze(FGaze& gaze) const
 	gaze.right_pupil_diameter_mm = vd.right.pupil_diameter_mm;
 	gaze.right_pupil_openness = vd.right.eye_openness;
 	//here you can insert custom calibration
+	// Calculate collision between eye vector and scene objects
 	auto GM = GetWorld()->GetAuthGameMode<AVRGameModeBase>();
 	GM->RayTrace(this, gaze.origin, gaze.origin + gaze.direction * InteractionDistance, gaze.target);
 }

@@ -97,7 +97,8 @@ struct AVRGameModeWithSciViBase::Impl
 	void SendToSciVi(const FString& message)
 	{
 		for (auto& connection : m_server.get_connections())//broadcast to everyone
-			connection->send(TCHAR_TO_UTF8(*message));
+			if (connection)
+				connection->send(TCHAR_TO_UTF8(*message));
 	}
 
 private:

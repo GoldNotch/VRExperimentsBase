@@ -76,6 +76,8 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Experiment")
 	void PrevExperimentStep();
 	UFUNCTION(BlueprintCallable, Category = "Experiment")
+	void ResetExperimentSteps();
+	UFUNCTION(BlueprintCallable, Category = "Experiment")
 	FORCEINLINE bool HasExperimentSteps() { return ExperimentSteps.Num() > 0; }
 
 	// events

@@ -229,6 +229,18 @@ void AVRGameModeBase::PrevExperimentStep()
 	}
 }
 
+void AVRGameModeBase::ResetExperimentSteps()
+{
+	check(IsExperimentStarted());
+	if (IsValid(CurrentExperimentStep))
+	{
+		GetWorld()->RemoveActor(CurrentExperimentStep, true);
+		CurrentExperimentStep->Destroy();//it calls end play and quit step
+	}
+	CurrentExpeirmentStepIndex = -1;
+	NextExperimentStep();
+}
+
 void AVRGameModeBase::OnExperimentStarted(const FString& _InformantName)
 {
 	OnExperimentStarted_BP(_InformantName);

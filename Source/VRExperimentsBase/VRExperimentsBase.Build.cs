@@ -15,7 +15,7 @@ public class VRExperimentsBase : ModuleRules
 			}
 			);
 
-		Definitions.Add("_USE_SCIVI_CONNECTION_");
+		PublicDefinitions.Add("_USE_SCIVI_CONNECTION_");
 		PrivateIncludePaths.AddRange(
 			new string[] {
 				"ThirdPartyLibs",
