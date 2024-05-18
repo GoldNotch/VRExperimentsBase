@@ -28,39 +28,40 @@ struct AVRGameModeWithSciViBase::Impl
 		auto& ep = m_server.endpoint["^/ue4/?$"];
 
 		ep.on_message = [this](std::shared_ptr<WSServer::Connection> connection, std::shared_ptr<WSServer::InMessage> msg)
-		{
-			auto str = FString(UTF8_TO_TCHAR(msg->string().c_str()));
-			message_queue.Enqueue(str);
-		};
+			{
+				auto str = FString(UTF8_TO_TCHAR(msg->string().c_str()));
+				message_queue.Enqueue(str);
+			};
 
 		ep.on_open = [this](std::shared_ptr<WSServer::Connection> connection)
-		{
-			UE_LOG(LogTemp, Display, TEXT("WebSocket: Opened"));
-			message_queue.Empty();
-			owner.OnSciViConnected();
-		};
+			{
+				UE_LOG(LogTemp, Display, TEXT("WebSocket: Opened"));
+				message_queue.Empty();
+				owner.OnSciViConnected();
+			};
 
 		ep.on_close = [this](std::shared_ptr<WSServer::Connection> connection, int status, const std::string&)
-		{
-			UE_LOG(LogTemp, Display, TEXT("WebSocket: Closed"));
-			message_queue.Empty();
-			owner.OnSciViDisconnected();
-		};
+			{
+				UE_LOG(LogTemp, Display, TEXT("WebSocket: Closed"));
+				message_queue.Empty();
+				owner.OnSciViDisconnected();
+			};
 
 		ep.on_handshake = [](std::shared_ptr<WSServer::Connection>, SimpleWeb::CaseInsensitiveMultimap&)
-		{
-			return SimpleWeb::StatusCode::information_switching_protocols;
-		};
+			{
+				return SimpleWeb::StatusCode::information_switching_protocols;
+			};
 
 		ep.on_error = [](std::shared_ptr<WSServer::Connection> connection, const SimpleWeb::error_code& ec)
-		{
-			UE_LOG(LogTemp, Warning, TEXT("WebSocket: Error"));
-		};
+			{
+				UE_LOG(LogTemp, Warning, TEXT("WebSocket: Error"));
+			};
 
-		thread = std::make_unique<std::thread>([this] {m_server.start(); });
+		thread = std::make_unique<std::thread>([this] { can_send = true; m_server.start();  });
 	}
 	~Impl()
 	{
+		can_send = false;
 		m_server.stop();
 		thread->join();
 	}
@@ -96,9 +97,10 @@ struct AVRGameModeWithSciViBase::Impl
 
 	void SendToSciVi(const FString& message)
 	{
-		for (auto& connection : m_server.get_connections())//broadcast to everyone
-			if (connection)
-				connection->send(TCHAR_TO_UTF8(*message));
+		if (can_send)
+			for (auto&& connection : m_server.get_connections())//broadcast to everyone
+				if (connection)
+					connection->send(TCHAR_TO_UTF8(*message));
 	}
 
 private:
@@ -107,6 +109,7 @@ private:
 	WSServer m_server;
 	std::unique_ptr<std::thread> thread;
 	TQueue<FString> message_queue;
+	FThreadSafeBool can_send = false; ///< can send messages
 };
 #else
 struct AVRGameModeWithSciViBase::Impl
@@ -145,7 +148,7 @@ void AVRGameModeWithSciViBase::initWS()
 
 void AVRGameModeWithSciViBase::SendToSciVi(const FString& message)
 {
-	if (bExperimentRunning && bRecordLogs) 
+	if (bExperimentRunning && bRecordLogs)
 	{
 		auto msg = FString::Printf(TEXT("{\"Time\": %lli, %s}"), GetLogTimestamp(), *message);
 		impl->SendToSciVi(msg);
