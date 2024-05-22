@@ -79,10 +79,7 @@ struct AVRGameModeWithSciViBase::Impl
 				else if (jsonParsed->TryGetField(TEXT("nextExperimentStep")))
 					owner.NextExperimentStep();
 				else if (jsonParsed->TryGetField(TEXT("resetExperimentStep")))
-				{
-					owner.FinishExperiment(0, "reset");
-					owner.StartExperiment(owner.bRecordLogs, owner.InformantName);
-				}
+					owner.ResetExperimentSteps();
 				else if (jsonParsed->TryGetField(TEXT("prevExperimentStep")))
 					owner.PrevExperimentStep();
 				else if (jsonParsed->TryGetField(TEXT("startExperiment")))

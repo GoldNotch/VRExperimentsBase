@@ -239,6 +239,7 @@ void AVRGameModeBase::ResetExperimentSteps()
 	}
 	CurrentExpeirmentStepIndex = -1;
 	NextExperimentStep();
+	OnResetExperimentSteps();
 }
 
 void AVRGameModeBase::OnExperimentStarted(const FString& _InformantName)

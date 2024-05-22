@@ -89,6 +89,9 @@ public:
 	void OnExperimentFinished_BP(int code, const FString& message);
 
 protected:
+	virtual void OnResetExperimentSteps() {};
+
+protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 	AExperimentStepBase* CurrentExperimentStep = nullptr;
 	int32 CurrentExpeirmentStepIndex = -1;
