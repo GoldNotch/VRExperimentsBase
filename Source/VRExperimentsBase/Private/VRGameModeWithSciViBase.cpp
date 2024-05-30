@@ -59,7 +59,7 @@ struct AVRGameModeWithSciViBase::Impl
 
 		thread = std::make_unique<std::thread>([this] { can_send = true; m_server.start();  });
 	}
-	~Impl()
+	~Impl() noexcept
 	{
 		can_send = false;
 		m_server.stop();
@@ -121,12 +121,14 @@ struct AVRGameModeWithSciViBase::Impl
 void AVRGameModeWithSciViBase::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
-	impl->Tick(DeltaTime);
+	if (impl)
+		impl->Tick(DeltaTime);
 }
 
 void AVRGameModeWithSciViBase::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
 	delete impl;
+	impl = nullptr;
 	Super::EndPlay(EndPlayReason);
 }
 
@@ -145,7 +147,7 @@ void AVRGameModeWithSciViBase::initWS()
 
 void AVRGameModeWithSciViBase::SendToSciVi(const FString& message)
 {
-	if (bExperimentRunning && bRecordLogs)
+	if (bExperimentRunning && bRecordLogs && impl)
 	{
 		auto msg = FString::Printf(TEXT("{\"Time\": %lli, %s}"), GetLogTimestamp(), *message);
 		impl->SendToSciVi(msg);

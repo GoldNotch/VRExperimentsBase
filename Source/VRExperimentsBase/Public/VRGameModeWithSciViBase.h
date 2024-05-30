@@ -34,5 +34,5 @@ protected:
 	void initWS();
 	
 	struct Impl;
-	Impl* impl;
+	Impl* impl = nullptr;
 };
